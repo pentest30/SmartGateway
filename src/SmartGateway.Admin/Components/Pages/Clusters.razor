@@ -43,15 +43,23 @@ else
                     </div>
                     @if (cluster.IsActive)
                     {
-                        var healthy = cluster.Destinations.Count(d => d.IsHealthy);
+                        var healthy = cluster.Destinations.Count(d => IsReallyHealthy(d));
                         var total = cluster.Destinations.Count;
-                        @if (total == 0 || healthy == total)
+                        @if (total == 0)
+                        {
+                            <span class="badge badge-gray"><span class="badge-dot"></span>no destinations</span>
+                        }
+                        else if (healthy == total)
                         {
                             <span class="badge badge-green"><span class="badge-dot"></span>healthy</span>
                         }
-                        else
+                        else if (healthy > 0)
                         {
                             <span class="badge badge-warn"><span class="badge-dot"></span>degraded</span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-gray"><span class="badge-dot"></span>unknown</span>
                         }
                     }
                     else
@@ -61,17 +69,23 @@ else
                 </div>
                 @foreach (var dest in cluster.Destinations)
                 {
+                    var destHealthy = IsReallyHealthy(dest);
+                    var destEvicted = !dest.IsHealthy;
                     <div class="dest-row">
-                        <div class="dest-indicator" style="background:@(dest.IsHealthy ? "var(--success)" : "var(--danger)")"></div>
+                        <div class="dest-indicator" style="background:@(destEvicted ? "var(--danger)" : destHealthy ? "var(--success)" : "var(--text3)")"></div>
                         <div class="dest-addr">@dest.Address</div>
                         <div class="dest-weight">w:@dest.Weight</div>
-                        @if (dest.IsHealthy)
+                        @if (destEvicted)
+                        {
+                            <span class="badge badge-red" style="font-size:10px">evicted</span>
+                        }
+                        else if (destHealthy)
                         {
                             <span class="badge badge-green" style="font-size:10px">active</span>
                         }
                         else
                         {
-                            <span class="badge badge-red" style="font-size:10px">evicted</span>
+                            <span class="badge badge-gray" style="font-size:10px">unknown</span>
                         }
                     </div>
                 }
@@ -162,5 +176,14 @@ else
         var c = await context.Clusters.FindAsync(id);
         if (c != null) { context.Clusters.Remove(c); await context.SaveChangesAsync(); }
         await LoadClusters();
+    }
+
+    private static bool IsReallyHealthy(GatewayDestination dest)
+    {
+        if (!dest.IsHealthy) return false;
+        if (dest.LastHeartbeat == null) return false;
+        var age = DateTime.UtcNow - dest.LastHeartbeat.Value;
+        var threshold = dest.TtlSeconds > 0 ? dest.TtlSeconds * 2 : 60;
+        return age.TotalSeconds <= threshold;
     }
 }

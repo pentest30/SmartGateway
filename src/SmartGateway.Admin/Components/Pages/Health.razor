@@ -3,6 +3,7 @@
 @using SmartGateway.Core.Data
 @using SmartGateway.Core.Entities
 @inject IDbContextFactory<SmartGatewayDbContext> DbFactory
+@implements IDisposable
 @rendermode InteractiveServer
 
 <PageTitle>Health - SmartGateway</PageTitle>
@@ -24,12 +25,12 @@
         <div class="stat-val" style="color:var(--success)">@_healthy</div>
     </div>
     <div class="stat-card">
-        <div class="stat-label">Evicted</div>
-        <div class="stat-val" style="color:@(_evicted > 0 ? "var(--danger)" : "var(--text)")">@_evicted</div>
+        <div class="stat-label">Unknown</div>
+        <div class="stat-val" style="color:@(_unknown > 0 ? "var(--warn)" : "var(--text)")">@_unknown</div>
     </div>
     <div class="stat-card">
-        <div class="stat-label">Health rate</div>
-        <div class="stat-val">@(_total > 0 ? $"{(double)_healthy/_total*100:F0}" : "--")<span class="stat-unit">%</span></div>
+        <div class="stat-label">Evicted</div>
+        <div class="stat-val" style="color:@(_evicted > 0 ? "var(--danger)" : "var(--text)")">@_evicted</div>
     </div>
 </div>
 
@@ -51,21 +52,37 @@
         <div class="health-grid">
             @foreach (var dest in _destinations)
             {
-                <div class="health-node" style="@(!dest.IsHealthy ? "border-color:rgba(255,71,87,0.3)" : "")">
+                var status = GetStatus(dest);
+                <div class="health-node" style="@(status == DestStatus.Evicted ? "border-color:rgba(255,71,87,0.3)" : "")">
                     <div class="health-name">@dest.ClusterId / @dest.DestinationId</div>
                     <div class="health-addr">@dest.Address</div>
                     <div style="display:flex;justify-content:space-between;align-items:center">
-                        @if (dest.IsHealthy)
+                        @if (status == DestStatus.Healthy)
                         {
                             <span class="badge badge-green"><span class="badge-dot"></span>healthy</span>
                         }
-                        else
+                        else if (status == DestStatus.Evicted)
                         {
                             <span class="badge badge-red"><span class="badge-dot"></span>evicted</span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-gray"><span class="badge-dot"></span>unknown</span>
                         }
                         <span style="font-family:var(--mono);font-size:10px;color:var(--text3)">
                             w:@dest.Weight
                         </span>
+                    </div>
+                    <div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:4px">
+                        @if (dest.LastHeartbeat != null)
+                        {
+                            var ago = DateTime.UtcNow - dest.LastHeartbeat.Value;
+                            <span>last seen @FormatAge(ago)</span>
+                        }
+                        else
+                        {
+                            <span>no heartbeat</span>
+                        }
                     </div>
                     @if (!dest.IsHealthy)
                     {
@@ -81,17 +98,28 @@
 
 @code {
     private List<GatewayDestination>? _destinations;
-    private int _total, _healthy, _evicted;
+    private int _total, _healthy, _evicted, _unknown;
+    private Timer? _timer;
 
-    protected override async Task OnInitializedAsync() => await Load();
+    protected override async Task OnInitializedAsync()
+    {
+        await Load();
+        _timer = new Timer(async _ =>
+        {
+            await Load();
+            await InvokeAsync(StateHasChanged);
+        }, null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
+    }
 
     private async Task Load()
     {
         using var context = await DbFactory.CreateDbContextAsync();
-        _destinations = await context.Destinations.AsNoTracking().OrderBy(d => d.ClusterId).ThenBy(d => d.DestinationId).ToListAsync();
+        _destinations = await context.Destinations.AsNoTracking()
+            .OrderBy(d => d.ClusterId).ThenBy(d => d.DestinationId).ToListAsync();
         _total = _destinations.Count;
-        _healthy = _destinations.Count(d => d.IsHealthy);
-        _evicted = _total - _healthy;
+        _healthy = _destinations.Count(d => GetStatus(d) == DestStatus.Healthy);
+        _evicted = _destinations.Count(d => GetStatus(d) == DestStatus.Evicted);
+        _unknown = _destinations.Count(d => GetStatus(d) == DestStatus.Unknown);
     }
 
     private async Task ReAdmit(int id)
@@ -101,4 +129,29 @@
         if (d != null) { d.IsHealthy = true; await context.SaveChangesAsync(); }
         await Load();
     }
+
+    private enum DestStatus { Healthy, Evicted, Unknown }
+
+    private static DestStatus GetStatus(GatewayDestination dest)
+    {
+        if (!dest.IsHealthy)
+            return DestStatus.Evicted;
+        if (dest.LastHeartbeat == null)
+            return DestStatus.Unknown;
+        var age = DateTime.UtcNow - dest.LastHeartbeat.Value;
+        var threshold = dest.TtlSeconds > 0 ? dest.TtlSeconds * 2 : 60;
+        if (age.TotalSeconds > threshold)
+            return DestStatus.Unknown;
+        return DestStatus.Healthy;
+    }
+
+    private static string FormatAge(TimeSpan age)
+    {
+        if (age.TotalSeconds < 10) return "just now";
+        if (age.TotalSeconds < 60) return $"{(int)age.TotalSeconds}s ago";
+        if (age.TotalMinutes < 60) return $"{(int)age.TotalMinutes}m ago";
+        return $"{(int)age.TotalHours}h ago";
+    }
+
+    public void Dispose() => _timer?.Dispose();
 }

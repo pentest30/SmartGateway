@@ -9,10 +9,6 @@ public class WeightedLoadBalancingPolicy : ILoadBalancingPolicy
 {
     private readonly IDestinationWeightProvider _weightProvider;
 
-    [ThreadStatic]
-    private static Random? _random;
-    private static Random Random => _random ??= new Random();
-
     public WeightedLoadBalancingPolicy(IDestinationWeightProvider weightProvider)
     {
         _weightProvider = weightProvider;
@@ -42,9 +38,9 @@ public class WeightedLoadBalancingPolicy : ILoadBalancingPolicy
         }
 
         if (totalWeight == 0)
-            return availableDestinations[Random.Next(availableDestinations.Count)];
+            return availableDestinations[Random.Shared.Next(availableDestinations.Count)];
 
-        var target = Random.Next(totalWeight);
+        var target = Random.Shared.Next(totalWeight);
         for (int i = 0; i < cumulativeWeights.Length; i++)
         {
             if (target < cumulativeWeights[i])

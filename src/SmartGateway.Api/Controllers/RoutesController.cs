@@ -12,11 +12,13 @@ public class RoutesController : ControllerBase
 {
     private readonly SmartGatewayDbContext _context;
     private readonly IAuditService _audit;
+    private readonly IConfigReloadNotifier _reloadNotifier;
 
-    public RoutesController(SmartGatewayDbContext context, IAuditService audit)
+    public RoutesController(SmartGatewayDbContext context, IAuditService audit, IConfigReloadNotifier reloadNotifier)
     {
         _context = context;
         _audit = audit;
+        _reloadNotifier = reloadNotifier;
     }
 
     [HttpGet]
@@ -38,6 +40,7 @@ public class RoutesController : ControllerBase
         await _context.SaveChangesAsync();
         await _audit.LogAsync("Route", route.RouteId, "CREATE", "api",
             null, new { route.RouteId, route.ClusterId, route.PathPattern });
+        await _reloadNotifier.NotifyConfigChangedAsync();
 
         return CreatedAtAction(nameof(GetAll), new { id = route.RouteId }, route);
     }
@@ -62,6 +65,7 @@ public class RoutesController : ControllerBase
         await _context.SaveChangesAsync();
         await _audit.LogAsync("Route", id, "UPDATE", "api", old,
             new { route.PathPattern, route.ClusterId, route.IsActive });
+        await _reloadNotifier.NotifyConfigChangedAsync();
 
         return Ok(route);
     }
@@ -76,6 +80,7 @@ public class RoutesController : ControllerBase
         await _context.SaveChangesAsync();
         await _audit.LogAsync("Route", id, "DELETE", "api",
             new { route.RouteId, route.PathPattern }, null);
+        await _reloadNotifier.NotifyConfigChangedAsync();
 
         return NoContent();
     }

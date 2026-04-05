@@ -11,6 +11,7 @@ public class GatewayResiliencePolicy
     public int CircuitSamplingMs { get; set; } = 30000;
     public int CircuitBreakMs { get; set; } = 30000;
     public int TimeoutMs { get; set; } = 10000;
+    public string? RetryOnStatusCodes { get; set; } = "502,503,504";
 
     public GatewayCluster? Cluster { get; set; }
 }

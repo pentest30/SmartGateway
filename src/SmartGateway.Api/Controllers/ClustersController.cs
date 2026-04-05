@@ -12,11 +12,13 @@ public class ClustersController : ControllerBase
 {
     private readonly SmartGatewayDbContext _context;
     private readonly IAuditService _audit;
+    private readonly IConfigReloadNotifier _reloadNotifier;
 
-    public ClustersController(SmartGatewayDbContext context, IAuditService audit)
+    public ClustersController(SmartGatewayDbContext context, IAuditService audit, IConfigReloadNotifier reloadNotifier)
     {
         _context = context;
         _audit = audit;
+        _reloadNotifier = reloadNotifier;
     }
 
     [HttpGet]
@@ -39,6 +41,7 @@ public class ClustersController : ControllerBase
         await _context.SaveChangesAsync();
         await _audit.LogAsync("Cluster", cluster.ClusterId, "CREATE", "api",
             null, new { cluster.ClusterId, cluster.LoadBalancing });
+        await _reloadNotifier.NotifyConfigChangedAsync();
 
         return CreatedAtAction(nameof(GetAll), new { id = cluster.ClusterId }, cluster);
     }
@@ -56,6 +59,7 @@ public class ClustersController : ControllerBase
         await _context.SaveChangesAsync();
         await _audit.LogAsync("Cluster", id, "UPDATE", "api", old,
             new { cluster.LoadBalancing, cluster.IsActive });
+        await _reloadNotifier.NotifyConfigChangedAsync();
 
         return Ok(cluster);
     }
@@ -70,6 +74,7 @@ public class ClustersController : ControllerBase
         await _context.SaveChangesAsync();
         await _audit.LogAsync("Cluster", id, "DELETE", "api",
             new { cluster.ClusterId, cluster.LoadBalancing }, null);
+        await _reloadNotifier.NotifyConfigChangedAsync();
 
         return NoContent();
     }

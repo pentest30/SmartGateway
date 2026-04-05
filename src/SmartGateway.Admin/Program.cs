@@ -10,6 +10,13 @@ builder.Services.AddRazorComponents()
 builder.Services.AddDbContextFactory<SmartGatewayDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("SmartGateway")));
 
+builder.Services.AddHttpClient("GatewayHost", client =>
+{
+    var hostUrl = builder.Configuration["GatewayHost:Url"] ?? "http://localhost:5000";
+    client.BaseAddress = new Uri(hostUrl);
+    client.Timeout = TimeSpan.FromSeconds(1);
+});
+
 var app = builder.Build();
 
 // Ensure database is created on startup

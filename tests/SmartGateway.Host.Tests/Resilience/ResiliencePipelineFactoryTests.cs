@@ -1,3 +1,4 @@
+using System.Net;
 using FluentAssertions;
 using Polly;
 using Polly.Timeout;
@@ -38,11 +39,65 @@ public class ResiliencePipelineFactoryTests
             attempts++;
             if (attempts < 3)
                 throw new HttpRequestException("Transient failure");
-            return "success";
+            return new HttpResponseMessage(HttpStatusCode.OK);
         });
 
-        result.Should().Be("success");
+        result.StatusCode.Should().Be(HttpStatusCode.OK);
         attempts.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task Pipeline_ShouldRetryOn5xxStatusCodes()
+    {
+        var policy = new GatewayResiliencePolicy
+        {
+            ClusterId = "c1",
+            RetryMaxAttempts = 3,
+            RetryBackoffType = "Linear",
+            RetryDelayMs = 10,
+            CircuitEnabled = false,
+            RetryOnStatusCodes = "502,503"
+        };
+
+        var pipeline = ResiliencePipelineFactory.CreatePipeline(policy);
+        int attempts = 0;
+
+        var result = await pipeline.ExecuteAsync(async ct =>
+        {
+            attempts++;
+            if (attempts < 3)
+                return new HttpResponseMessage(HttpStatusCode.BadGateway);
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+
+        result.StatusCode.Should().Be(HttpStatusCode.OK);
+        attempts.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task Pipeline_ShouldNotRetryOnNonConfiguredStatusCodes()
+    {
+        var policy = new GatewayResiliencePolicy
+        {
+            ClusterId = "c1",
+            RetryMaxAttempts = 3,
+            RetryBackoffType = "Linear",
+            RetryDelayMs = 10,
+            CircuitEnabled = false,
+            RetryOnStatusCodes = "502,503"
+        };
+
+        var pipeline = ResiliencePipelineFactory.CreatePipeline(policy);
+        int attempts = 0;
+
+        var result = await pipeline.ExecuteAsync(async ct =>
+        {
+            attempts++;
+            return new HttpResponseMessage(HttpStatusCode.BadRequest);
+        });
+
+        result.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        attempts.Should().Be(1);
     }
 
     [Fact]
@@ -61,7 +116,7 @@ public class ResiliencePipelineFactoryTests
         var act = () => pipeline.ExecuteAsync(async ct =>
         {
             await Task.Delay(5000, ct);
-            return "done";
+            return new HttpResponseMessage(HttpStatusCode.OK);
         }).AsTask();
 
         await act.Should().ThrowAsync<TimeoutRejectedException>();

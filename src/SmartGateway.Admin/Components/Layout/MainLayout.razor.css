@@ -80,6 +80,15 @@
     50% { opacity: 0.3; }
 }
 
+::deep .spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
 .avatar {
     width: 30px;
     height: 30px;

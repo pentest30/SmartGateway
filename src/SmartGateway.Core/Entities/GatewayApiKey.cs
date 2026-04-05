@@ -6,6 +6,7 @@ public class GatewayApiKey
     public string KeyHash { get; set; } = default!;
     public string Name { get; set; } = default!;
     public string? Scopes { get; set; }
+    public string Role { get; set; } = "admin";
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastUsedAt { get; set; }

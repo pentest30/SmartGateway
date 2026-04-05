@@ -12,11 +12,13 @@ public class ServicesController : ControllerBase
 {
     private readonly SmartGatewayDbContext _context;
     private readonly IAuditService _audit;
+    private readonly IConfigReloadNotifier _reloadNotifier;
 
-    public ServicesController(SmartGatewayDbContext context, IAuditService audit)
+    public ServicesController(SmartGatewayDbContext context, IAuditService audit, IConfigReloadNotifier reloadNotifier)
     {
         _context = context;
         _audit = audit;
+        _reloadNotifier = reloadNotifier;
     }
 
     [HttpGet]
@@ -57,6 +59,7 @@ public class ServicesController : ControllerBase
         await _context.SaveChangesAsync();
         await _audit.LogAsync("Destination", request.DestinationId, "REGISTER", "service",
             null, new { request.ClusterId, request.Address, request.TtlSeconds });
+        await _reloadNotifier.NotifyConfigChangedAsync();
 
         return Ok();
     }
@@ -84,6 +87,7 @@ public class ServicesController : ControllerBase
         await _context.SaveChangesAsync();
         await _audit.LogAsync("Destination", id, "DEREGISTER", "service",
             new { dest.ClusterId, dest.Address }, null);
+        await _reloadNotifier.NotifyConfigChangedAsync();
 
         return NoContent();
     }

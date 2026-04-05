@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SmartGateway.Core.Data;
 
@@ -11,9 +12,11 @@ using SmartGateway.Core.Data;
 namespace SmartGateway.Core.Migrations
 {
     [DbContext(typeof(SmartGatewayDbContext))]
-    partial class SmartGatewayDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260405192842_AddRbacAndRetryStatusCodes")]
+    partial class AddRbacAndRetryStatusCodes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

@@ -3,6 +3,7 @@
 @using SmartGateway.Core.Data
 @using SmartGateway.Core.Entities
 @inject IDbContextFactory<SmartGatewayDbContext> DbFactory
+@implements IDisposable
 @rendermode InteractiveServer
 
 <PageTitle>Dashboard - SmartGateway</PageTitle>
@@ -10,7 +11,7 @@
 <div class="page-header">
     <div>
         <div class="page-title">Dashboard</div>
-        <div class="page-sub">Control plane overview — live YARP state</div>
+        <div class="page-sub">Control plane overview</div>
     </div>
     <div style="margin-left:auto;display:flex;gap:8px">
         <a href="audit" class="btn btn-ghost btn-sm">Export</a>
@@ -35,9 +36,13 @@
     <div class="stat-card">
         <div class="stat-label">Healthy nodes</div>
         <div class="stat-val">@_healthyCount<span class="stat-unit">/@_destinationCount</span></div>
-        @if (_unhealthyCount > 0)
+        @if (_unknownCount > 0)
         {
-            <div class="stat-delta down">@_unhealthyCount node evicted</div>
+            <div class="stat-delta down">@_unknownCount unknown</div>
+        }
+        else if (_unhealthyCount > 0)
+        {
+            <div class="stat-delta down">@_unhealthyCount evicted</div>
         }
         else
         {
@@ -58,7 +63,6 @@
     <div class="card">
         <div class="card-header">
             <div class="card-title">Destinations per cluster</div>
-            <span class="badge badge-blue">live</span>
         </div>
         @if (_clusterDestCounts != null && _clusterDestCounts.Count > 0)
         {
@@ -211,12 +215,23 @@
 
 @code {
     private int _clusterCount, _activeClusterCount, _routeCount, _activeRouteCount;
-    private int _destinationCount, _healthyCount, _unhealthyCount, _resilienceCount;
+    private int _destinationCount, _healthyCount, _unhealthyCount, _unknownCount, _resilienceCount;
     private List<GatewayRoute>? _routes;
     private List<ClusterDestCount>? _clusterDestCounts;
     private List<GatewayAuditLog>? _recentAudit;
+    private Timer? _timer;
 
     protected override async Task OnInitializedAsync()
+    {
+        await Load();
+        _timer = new Timer(async _ =>
+        {
+            await Load();
+            await InvokeAsync(StateHasChanged);
+        }, null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
+    }
+
+    private async Task Load()
     {
         using var context = await DbFactory.CreateDbContextAsync();
 
@@ -224,10 +239,13 @@
         _activeClusterCount = await context.Clusters.CountAsync(c => c.IsActive);
         _routeCount = await context.Routes.CountAsync();
         _activeRouteCount = await context.Routes.CountAsync(r => r.IsActive);
-        _destinationCount = await context.Destinations.CountAsync();
-        _healthyCount = await context.Destinations.CountAsync(d => d.IsHealthy);
-        _unhealthyCount = _destinationCount - _healthyCount;
         _resilienceCount = await context.ResiliencePolicies.CountAsync();
+
+        var allDests = await context.Destinations.AsNoTracking().ToListAsync();
+        _destinationCount = allDests.Count;
+        _healthyCount = allDests.Count(d => IsReallyHealthy(d));
+        _unhealthyCount = allDests.Count(d => !d.IsHealthy);
+        _unknownCount = _destinationCount - _healthyCount - _unhealthyCount;
 
         _routes = await context.Routes.AsNoTracking()
             .Where(r => r.IsActive)
@@ -235,22 +253,31 @@
             .Take(10)
             .ToListAsync();
 
-        _clusterDestCounts = await context.Clusters.AsNoTracking()
+        var clusters = await context.Clusters.AsNoTracking()
             .Where(c => c.IsActive)
             .Include(c => c.Destinations)
-            .Select(c => new ClusterDestCount
-            {
-                ClusterId = c.ClusterId,
-                Total = c.Destinations.Count,
-                Healthy = c.Destinations.Count(d => d.IsHealthy)
-            })
-            .OrderByDescending(c => c.Total)
             .ToListAsync();
+
+        _clusterDestCounts = clusters.Select(c => new ClusterDestCount
+        {
+            ClusterId = c.ClusterId,
+            Total = c.Destinations.Count,
+            Healthy = c.Destinations.Count(d => IsReallyHealthy(d))
+        }).OrderByDescending(c => c.Total).ToList();
 
         _recentAudit = await context.AuditLogs.AsNoTracking()
             .OrderByDescending(a => a.ChangedAt)
             .Take(8)
             .ToListAsync();
+    }
+
+    private static bool IsReallyHealthy(GatewayDestination dest)
+    {
+        if (!dest.IsHealthy) return false;
+        if (dest.LastHeartbeat == null) return false;
+        var age = DateTime.UtcNow - dest.LastHeartbeat.Value;
+        var threshold = dest.TtlSeconds > 0 ? dest.TtlSeconds * 2 : 60;
+        return age.TotalSeconds <= threshold;
     }
 
     private static int Pct(int value, int total) => total > 0 ? (int)((double)value / total * 100) : 0;
@@ -262,6 +289,8 @@
         "DELETE" or "DEREGISTER" => "delete",
         _ => ""
     };
+
+    public void Dispose() => _timer?.Dispose();
 
     private class ClusterDestCount
     {

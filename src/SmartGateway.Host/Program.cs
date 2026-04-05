@@ -81,18 +81,26 @@ builder.Services.AddOpenTelemetry()
 
 var app = builder.Build();
 
-// Ensure database is migrated on startup
-if (app.Configuration["SKIP_DB_MIGRATION"] != "true")
-{
-    using var scope = app.Services.CreateScope();
-    var dbFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<SmartGatewayDbContext>>();
-    using var db = dbFactory.CreateDbContext();
-    db.Database.Migrate();
-}
-
-// Load initial YARP config from DB
+// Ensure database is migrated on startup — gracefully degrade if DB is unavailable
 var configProvider = app.Services.GetRequiredService<DatabaseProxyConfigProvider>();
-configProvider.SignalReload();
+try
+{
+    if (app.Configuration["SKIP_DB_MIGRATION"] != "true")
+    {
+        using var scope = app.Services.CreateScope();
+        var dbFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<SmartGatewayDbContext>>();
+        using var db = dbFactory.CreateDbContext();
+        db.Database.Migrate();
+    }
+
+    // Load initial YARP config from DB
+    configProvider.SignalReload();
+}
+catch (Exception ex)
+{
+    Log.Warning(ex, "Database unavailable at startup — gateway will start with empty config. " +
+        "Call POST /_admin/reload once the database is available.");
+}
 
 app.UseWebSockets();
 app.UseSerilogRequestLogging();

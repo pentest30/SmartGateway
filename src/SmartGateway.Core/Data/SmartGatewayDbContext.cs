@@ -56,6 +56,7 @@ public class SmartGatewayDbContext : DbContext
         {
             entity.HasKey(e => e.ClusterId);
             entity.Property(e => e.ClusterId).HasMaxLength(100);
+            entity.Property(e => e.RetryOnStatusCodes).HasMaxLength(200).HasDefaultValue("502,503,504");
 
             entity.HasOne(e => e.Cluster)
                 .WithOne(c => c.ResiliencePolicy)
@@ -91,6 +92,7 @@ public class SmartGatewayDbContext : DbContext
             entity.Property(e => e.KeyHash).HasMaxLength(256).IsRequired();
             entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
             entity.Property(e => e.Scopes).HasMaxLength(500);
+            entity.Property(e => e.Role).HasMaxLength(50).HasDefaultValue("admin");
         });
     }
 }

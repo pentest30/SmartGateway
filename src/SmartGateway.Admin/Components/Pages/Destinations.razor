@@ -23,13 +23,12 @@
         <span class="badge badge-gray">@(_destinations?.Count ?? 0) total</span>
         @if (_destinations != null)
         {
-            var healthy = _destinations.Count(d => d.IsHealthy);
-            <span class="badge badge-green">@healthy healthy</span>
-            var unhealthy = _destinations.Count - healthy;
-            @if (unhealthy > 0)
-            {
-                <span class="badge badge-red">@unhealthy unhealthy</span>
-            }
+            var healthy = _destinations.Count(d => IsReallyHealthy(d));
+            var unknown = _destinations.Count(d => d.IsHealthy && !IsReallyHealthy(d));
+            var evicted = _destinations.Count(d => !d.IsHealthy);
+            @if (healthy > 0) { <span class="badge badge-green">@healthy healthy</span> }
+            @if (unknown > 0) { <span class="badge badge-gray">@unknown unknown</span> }
+            @if (evicted > 0) { <span class="badge badge-red">@evicted evicted</span> }
         }
     </div>
     @if (_destinations == null)
@@ -66,16 +65,30 @@
                         <td><span style="font-family:var(--mono);font-size:12px;color:var(--text)">@dest.Address</span></td>
                         <td><span style="font-family:var(--mono);font-size:12px;color:var(--text3)">@dest.Weight</span></td>
                         <td>
-                            @if (dest.IsHealthy)
+                            @if (!dest.IsHealthy)
+                            {
+                                <span class="badge badge-red"><span class="badge-dot"></span>evicted</span>
+                            }
+                            else if (IsReallyHealthy(dest))
                             {
                                 <span class="badge badge-green"><span class="badge-dot"></span>healthy</span>
                             }
                             else
                             {
-                                <span class="badge badge-red"><span class="badge-dot"></span>evicted</span>
+                                <span class="badge badge-gray"><span class="badge-dot"></span>unknown</span>
                             }
                         </td>
-                        <td><span style="font-family:var(--mono);font-size:11px;color:var(--text3)">@(dest.LastHeartbeat?.ToString("HH:mm:ss") ?? "—")</span></td>
+                        <td>
+                            @if (dest.LastHeartbeat != null)
+                            {
+                                var ago = DateTime.UtcNow - dest.LastHeartbeat.Value;
+                                <span style="font-family:var(--mono);font-size:11px;color:var(--text3)">@FormatAge(ago)</span>
+                            }
+                            else
+                            {
+                                <span style="font-family:var(--mono);font-size:11px;color:var(--text3)">--</span>
+                            }
+                        </td>
                         <td>
                             <div style="display:flex;gap:4px">
                                 @if (dest.IsHealthy)
@@ -178,5 +191,22 @@
         var d = await context.Destinations.FindAsync(id);
         if (d != null) { context.Destinations.Remove(d); await context.SaveChangesAsync(); }
         await LoadData();
+    }
+
+    private static bool IsReallyHealthy(GatewayDestination dest)
+    {
+        if (!dest.IsHealthy) return false;
+        if (dest.LastHeartbeat == null) return false;
+        var age = DateTime.UtcNow - dest.LastHeartbeat.Value;
+        var threshold = dest.TtlSeconds > 0 ? dest.TtlSeconds * 2 : 60;
+        return age.TotalSeconds <= threshold;
+    }
+
+    private static string FormatAge(TimeSpan age)
+    {
+        if (age.TotalSeconds < 10) return "just now";
+        if (age.TotalSeconds < 60) return $"{(int)age.TotalSeconds}s ago";
+        if (age.TotalMinutes < 60) return $"{(int)age.TotalMinutes}m ago";
+        return $"{(int)age.TotalHours}h ago";
     }
 }

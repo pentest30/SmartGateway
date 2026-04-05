@@ -8,10 +8,6 @@ public class LatencyAwareLoadBalancingPolicy : ILoadBalancingPolicy
 {
     private readonly LatencyTracker _tracker;
 
-    [ThreadStatic]
-    private static Random? _random;
-    private static Random Random => _random ??= new Random();
-
     public LatencyAwareLoadBalancingPolicy(LatencyTracker tracker)
     {
         _tracker = tracker;
@@ -43,7 +39,7 @@ public class LatencyAwareLoadBalancingPolicy : ILoadBalancingPolicy
 
         // No latency data yet — random selection
         if (!hasData)
-            return availableDestinations[Random.Next(availableDestinations.Count)];
+            return availableDestinations[Random.Shared.Next(availableDestinations.Count)];
 
         // Inverse-latency weighted selection: lower latency = higher weight
         // Use 1/(p95+1) as weight to avoid division by zero
@@ -64,7 +60,7 @@ public class LatencyAwareLoadBalancingPolicy : ILoadBalancingPolicy
         }
 
         // Weighted random selection
-        var target = Random.NextDouble() * totalWeight;
+        var target = Random.Shared.NextDouble() * totalWeight;
         double cumulative = 0;
         for (int i = 0; i < weights.Length; i++)
         {
