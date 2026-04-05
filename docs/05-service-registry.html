@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service Registry - SmartGateway Documentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        :root{--bg:#0d1720;--card:#13202e;--accent:#00d4aa;--accent-dim:#00d4aa33;--text:#e8edf2;--text-muted:#8899aa;--border:#1e3248;--code-bg:#0a1219;--success:#00d4aa;--warning:#f0b429;--error:#ff6b6b}
+        body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);line-height:1.7;min-height:100vh}
+        .nav{background:#0a1219;border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;position:sticky;top:0;z-index:100}
+        .nav a{color:var(--text-muted);text-decoration:none;font-size:13px;font-weight:500;transition:color .15s}
+        .nav a:hover,.nav a.active{color:var(--accent)}
+        .nav-brand{color:var(--accent);font-weight:700;font-size:15px;margin-right:auto}
+        .container{max-width:900px;margin:0 auto;padding:48px 24px}
+        h1{font-size:36px;font-weight:800;margin-bottom:8px;color:var(--text)}
+        h2{font-size:24px;font-weight:700;margin:48px 0 16px;padding-top:24px;border-top:1px solid var(--border);color:var(--text)}
+        h3{font-size:18px;font-weight:600;margin:32px 0 12px;color:var(--accent)}
+        p{color:var(--text-muted);margin-bottom:16px}
+        .subtitle{font-size:18px;color:var(--text-muted);margin-bottom:40px}
+        .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:24px;margin:24px 0}
+        pre{background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:16px 20px;overflow-x:auto;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.6;color:var(--text);margin:16px 0}
+        code{font-family:'JetBrains Mono',monospace;background:var(--code-bg);padding:2px 6px;border-radius:4px;font-size:13px;color:var(--accent)}
+        .badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid}
+        .badge-green{background:rgba(0,212,170,0.1);color:var(--success);border-color:rgba(0,212,170,0.2)}
+        .badge-yellow{background:rgba(240,180,41,0.1);color:var(--warning);border-color:rgba(240,180,41,0.2)}
+        .badge-red{background:rgba(255,107,107,0.1);color:var(--error);border-color:rgba(255,107,107,0.2)}
+        .diagram{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text-muted);background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:20px;line-height:1.8;overflow-x:auto;white-space:pre;margin:16px 0}
+        .step{display:flex;gap:16px;margin:16px 0;align-items:flex-start}
+        .step-num{background:var(--accent);color:#0a1a14;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;margin-top:2px}
+        .step-body{flex:1}
+        .step-body strong{color:var(--text);display:block;margin-bottom:4px}
+        table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}
+        th{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text-muted);font-size:12px;text-transform:uppercase;letter-spacing:0.5px}
+        td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text-muted)}
+        .footer{text-align:center;padding:48px;color:var(--text-muted);font-size:13px;border-top:1px solid var(--border);margin-top:64px}
+        .try-it{background:rgba(0,212,170,0.05);border:1px solid rgba(0,212,170,0.2);border-radius:8px;padding:20px;margin:20px 0}
+        .try-it h4{color:var(--accent);font-size:14px;margin-bottom:12px}
+    </style>
+</head>
+<body>
+<nav class="nav">
+    <span class="nav-brand">SmartGateway Docs</span>
+    <a href="01-getting-started.html">Getting Started</a>
+    <a href="02-routing-clusters.html">Routing</a>
+    <a href="03-load-balancing.html">Load Balancing</a>
+    <a href="04-health-checks.html">Health</a>
+    <a href="05-service-registry.html" class="active">Registry</a>
+    <a href="06-resilience.html">Resilience</a>
+    <a href="07-authentication.html">Auth</a>
+    <a href="08-rate-limiting.html">Rate Limits</a>
+    <a href="09-canary-deployments.html">Canary</a>
+    <a href="10-transforms.html">Transforms</a>
+    <a href="11-admin-ui.html">Admin UI</a>
+</nav>
+
+<div class="container">
+<h1>Service Self-Registration</h1>
+<p class="subtitle">Kubernetes-style service discovery without Consul or etcd. Services register themselves at startup, send heartbeats, and are automatically evicted when they stop.</p>
+
+<h2>How It Works</h2>
+
+<div class="diagram">
+Service Startup              SmartGateway                    YARP Proxy
+     |                            |                              |
+     |-- POST /register --------->|                              |
+     |                            |-- Add destination to DB      |
+     |                            |-- SignalReload() ----------->|
+     |                            |                              |-- Route traffic
+     |                            |                              |
+     |-- PUT /heartbeat --------->| (every TTL/2 seconds)        |
+     |-- PUT /heartbeat --------->|                              |
+     |                            |                              |
+     |  (service crashes)         |                              |
+     |         X                  |                              |
+     |                            |-- TtlExpiryService runs      |
+     |                            |-- LastHeartbeat > TTL        |
+     |                            |-- Mark IsHealthy=false       |
+     |                            |-- SignalReload() ----------->|
+     |                            |                              |-- Stop routing
+</div>
+
+<h2>API Endpoints</h2>
+
+<table>
+    <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
+    <tbody>
+        <tr><td><code>POST</code></td><td><code>/admin/api/services/register</code></td><td>Register a destination (upsert)</td></tr>
+        <tr><td><code>PUT</code></td><td><code>/admin/api/services/{id}/heartbeat</code></td><td>Refresh TTL timer</td></tr>
+        <tr><td><code>DELETE</code></td><td><code>/admin/api/services/{id}</code></td><td>Graceful deregistration</td></tr>
+        <tr><td><code>GET</code></td><td><code>/admin/api/services</code></td><td>List all destinations</td></tr>
+    </tbody>
+</table>
+
+<h2>Registration</h2>
+
+<p>When a service starts, it calls the register endpoint with its cluster, address, and TTL:</p>
+
+<div class="try-it">
+<h4>Try it: Register a service</h4>
+<pre>curl -X POST http://localhost:5002/admin/api/services/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "clusterId": "inventory-service",
+    "destinationId": "inventory-pod-abc123",
+    "address": "http://10.0.2.55:8080",
+    "ttlSeconds": 30
+  }'</pre>
+</div>
+
+<h3>Registration Request Fields</h3>
+<table>
+    <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+    <tbody>
+        <tr><td><code>clusterId</code></td><td>string</td><td>Which cluster to join (must already exist)</td></tr>
+        <tr><td><code>destinationId</code></td><td>string</td><td>Unique ID for this instance</td></tr>
+        <tr><td><code>address</code></td><td>string</td><td>The upstream URL (e.g. <code>http://10.0.2.55:8080</code>)</td></tr>
+        <tr><td><code>ttlSeconds</code></td><td>int</td><td>How long before expiry if no heartbeat. Use <code>0</code> for permanent.</td></tr>
+    </tbody>
+</table>
+
+<p>If a destination with the same <code>clusterId + destinationId</code> already exists, it updates the address and refreshes the heartbeat (upsert behavior).</p>
+
+<h2>Heartbeat</h2>
+
+<p>Services must send periodic heartbeats to prevent TTL expiry. The recommended interval is <strong>TTL / 2</strong> (e.g., every 15s for a 30s TTL).</p>
+
+<div class="try-it">
+<h4>Try it: Send heartbeat</h4>
+<pre>curl -X PUT http://localhost:5002/admin/api/services/inventory-pod-abc123/heartbeat</pre>
+</div>
+
+<p>Each heartbeat updates <code>LastHeartbeat</code> to <code>DateTime.UtcNow</code> and sets <code>IsHealthy = true</code> (re-admits if previously evicted).</p>
+
+<h2>TTL Expiry</h2>
+
+<div class="card">
+    <h3>TtlExpiryService (Background Service)</h3>
+    <p>Runs every <strong>5 seconds</strong> inside SmartGateway.Host. It queries all destinations where:</p>
+    <pre>TtlSeconds > 0 AND IsHealthy = true AND (now - LastHeartbeat) > TtlSeconds</pre>
+    <p>Matching destinations are marked <code>IsHealthy = false</code> and excluded from YARP routing on the next reload.</p>
+    <p><span class="badge badge-yellow">Note</span> Destinations with <code>TtlSeconds = 0</code> are never expired — they are permanent until manually removed.</p>
+</div>
+
+<h2>Graceful Deregistration</h2>
+
+<p>When a service shuts down cleanly (e.g., pod termination), it should deregister itself:</p>
+
+<div class="try-it">
+<h4>Try it: Deregister on shutdown</h4>
+<pre>curl -X DELETE http://localhost:5002/admin/api/services/inventory-pod-abc123</pre>
+</div>
+
+<p>This immediately removes the destination from the database and triggers a YARP reload.</p>
+
+<h2>Full Lifecycle Example</h2>
+
+<div class="step"><div class="step-num">1</div><div class="step-body"><strong>Service starts</strong><p>Calls <code>POST /register</code> with TTL=30s</p></div></div>
+<div class="step"><div class="step-num">2</div><div class="step-body"><strong>Heartbeat loop</strong><p>Every 15s, calls <code>PUT /heartbeat</code></p></div></div>
+<div class="step"><div class="step-num">3</div><div class="step-body"><strong>Service crashes</strong><p>Heartbeats stop</p></div></div>
+<div class="step"><div class="step-num">4</div><div class="step-body"><strong>TTL expires (30s later)</strong><p>TtlExpiryService marks <code>IsHealthy = false</code></p></div></div>
+<div class="step"><div class="step-num">5</div><div class="step-body"><strong>Traffic rerouted</strong><p>Remaining healthy destinations handle all traffic</p></div></div>
+<div class="step"><div class="step-num">6</div><div class="step-body"><strong>Service recovers</strong><p>Calls <code>POST /register</code> again — re-admitted immediately</p></div></div>
+
+<h2>Integration with Your Service</h2>
+
+<p>Add this to your .NET service's <code>Program.cs</code>:</p>
+
+<pre>// On startup
+var http = new HttpClient();
+await http.PostAsJsonAsync("http://gateway:5002/admin/api/services/register", new {
+    clusterId = "my-service",
+    destinationId = Environment.MachineName,
+    address = $"http://{GetLocalIp()}:8080",
+    ttlSeconds = 30
+});
+
+// Background heartbeat
+var timer = new PeriodicTimer(TimeSpan.FromSeconds(15));
+while (await timer.WaitForNextTickAsync())
+    await http.PutAsync($"http://gateway:5002/admin/api/services/{Environment.MachineName}/heartbeat", null);
+
+// On shutdown (IHostApplicationLifetime.ApplicationStopping)
+await http.DeleteAsync($"http://gateway:5002/admin/api/services/{Environment.MachineName}");</pre>
+
+</div>
+<div class="footer">SmartGateway Documentation &mdash; Built with YARP &amp; .NET 10</div>
+</body>
+</html>

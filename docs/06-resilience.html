@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resilience - SmartGateway Documentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        :root{--bg:#0d1720;--card:#13202e;--accent:#00d4aa;--accent-dim:#00d4aa33;--text:#e8edf2;--text-muted:#8899aa;--border:#1e3248;--code-bg:#0a1219;--success:#00d4aa;--warning:#f0b429;--error:#ff6b6b}
+        body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);line-height:1.7;min-height:100vh}
+        .nav{background:#0a1219;border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;position:sticky;top:0;z-index:100}
+        .nav a{color:var(--text-muted);text-decoration:none;font-size:13px;font-weight:500;transition:color .15s}
+        .nav a:hover,.nav a.active{color:var(--accent)}
+        .nav-brand{color:var(--accent);font-weight:700;font-size:15px;margin-right:auto}
+        .container{max-width:900px;margin:0 auto;padding:48px 24px}
+        h1{font-size:36px;font-weight:800;margin-bottom:8px}
+        h2{font-size:24px;font-weight:700;margin:48px 0 16px;padding-top:24px;border-top:1px solid var(--border)}
+        h3{font-size:18px;font-weight:600;margin:32px 0 12px;color:var(--accent)}
+        p{color:var(--text-muted);margin-bottom:16px}
+        .subtitle{font-size:18px;color:var(--text-muted);margin-bottom:40px}
+        .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:24px;margin:24px 0}
+        pre{background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:16px 20px;overflow-x:auto;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.6;color:var(--text);margin:16px 0}
+        code{font-family:'JetBrains Mono',monospace;background:var(--code-bg);padding:2px 6px;border-radius:4px;font-size:13px;color:var(--accent)}
+        .badge{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid}
+        .badge-green{background:rgba(0,212,170,0.1);color:var(--success);border-color:rgba(0,212,170,0.2)}
+        .badge-yellow{background:rgba(240,180,41,0.1);color:var(--warning);border-color:rgba(240,180,41,0.2)}
+        .badge-red{background:rgba(255,107,107,0.1);color:var(--error);border-color:rgba(255,107,107,0.2)}
+        .diagram{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text-muted);background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:20px;line-height:1.8;overflow-x:auto;white-space:pre;margin:16px 0}
+        table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}
+        th{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text-muted);font-size:12px;text-transform:uppercase;letter-spacing:0.5px}
+        td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text-muted)}
+        .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin:24px 0}
+        .state-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;text-align:center}
+        .state-card h4{font-size:16px;margin-bottom:8px}
+        .state-card p{font-size:13px}
+        .try-it{background:rgba(0,212,170,0.05);border:1px solid rgba(0,212,170,0.2);border-radius:8px;padding:20px;margin:20px 0}
+        .try-it h4{color:var(--accent);font-size:14px;margin-bottom:12px}
+        .footer{text-align:center;padding:48px;color:var(--text-muted);font-size:13px;border-top:1px solid var(--border);margin-top:64px}
+    </style>
+</head>
+<body>
+<nav class="nav">
+    <span class="nav-brand">SmartGateway Docs</span>
+    <a href="01-getting-started.html">Getting Started</a>
+    <a href="02-routing-clusters.html">Routing</a>
+    <a href="03-load-balancing.html">Load Balancing</a>
+    <a href="04-health-checks.html">Health</a>
+    <a href="05-service-registry.html">Registry</a>
+    <a href="06-resilience.html" class="active">Resilience</a>
+    <a href="07-authentication.html">Auth</a>
+    <a href="08-rate-limiting.html">Rate Limits</a>
+    <a href="09-canary-deployments.html">Canary</a>
+    <a href="10-transforms.html">Transforms</a>
+    <a href="11-admin-ui.html">Admin UI</a>
+</nav>
+
+<div class="container">
+<h1>Resilience with Polly v8</h1>
+<p class="subtitle">Per-cluster retry, circuit breaker, and timeout pipelines powered by Polly v8. Configure via database, cached per cluster, rebuilt on config change.</p>
+
+<h2>Pipeline Architecture</h2>
+
+<div class="diagram">
+Request ──► [ Retry ] ──► [ Circuit Breaker ] ──► [ Timeout ] ──► Upstream
+               │                  │                    │
+               │ on failure       │ if open             │ if exceeded
+               └─► retry N times └─► fail fast (503)   └─► cancel + throw</div>
+
+<p>Each cluster gets its own <code>ResiliencePipeline</code> built from the <code>GatewayResiliencePolicy</code> entity. Pipelines are cached by cluster ID and rebuilt when configuration changes.</p>
+
+<h2>Configuration</h2>
+
+<table>
+    <thead><tr><th>Field</th><th>Default</th><th>Description</th></tr></thead>
+    <tbody>
+        <tr><td><code>RetryMaxAttempts</code></td><td>3</td><td>Max retry attempts before giving up</td></tr>
+        <tr><td><code>RetryBackoffType</code></td><td>Exponential</td><td><code>Exponential</code> or <code>Linear</code></td></tr>
+        <tr><td><code>RetryDelayMs</code></td><td>200</td><td>Base delay between retries (ms)</td></tr>
+        <tr><td><code>CircuitEnabled</code></td><td>true</td><td>Enable/disable circuit breaker</td></tr>
+        <tr><td><code>CircuitFailureRatio</code></td><td>0.5</td><td>Failure ratio to trip the circuit (0.0-1.0)</td></tr>
+        <tr><td><code>CircuitSamplingMs</code></td><td>30000</td><td>Sampling window for failure ratio</td></tr>
+        <tr><td><code>CircuitBreakMs</code></td><td>30000</td><td>How long the circuit stays open</td></tr>
+        <tr><td><code>TimeoutMs</code></td><td>10000</td><td>Per-request timeout</td></tr>
+    </tbody>
+</table>
+
+<h2>Circuit Breaker States</h2>
+
+<div class="grid-3">
+    <div class="state-card">
+        <h4 style="color:var(--success)">Closed</h4>
+        <p>Normal operation. Requests flow through. Failures are counted within the sampling window.</p>
+    </div>
+    <div class="state-card">
+        <h4 style="color:var(--error)">Open</h4>
+        <p>Too many failures. All requests <strong>fail fast</strong> with 503. No traffic reaches upstream.</p>
+    </div>
+    <div class="state-card">
+        <h4 style="color:var(--warning)">Half-Open</h4>
+        <p>After break duration, one probe request is allowed. If it succeeds, circuit closes. If it fails, circuit re-opens.</p>
+    </div>
+</div>
+
+<div class="diagram">
+         failures < ratio                     break duration elapsed
+  ┌──────────────────────┐               ┌──────────────────────────┐
+  │                      │               │                          │
+  ▼                      │               ▼                          │
+CLOSED ──failures > ratio──► OPEN ──timer──► HALF-OPEN              │
+  ▲                                          │        │             │
+  │                                          │        │             │
+  └──────── probe succeeds ──────────────────┘        │             │
+                                                      └─ probe fails┘</div>
+
+<h2>Retry Strategies</h2>
+
+<h3>Exponential Backoff</h3>
+<p>Delay doubles with each attempt: 200ms, 400ms, 800ms, 1600ms...</p>
+<pre>Attempt 1: wait 200ms, retry
+Attempt 2: wait 400ms, retry
+Attempt 3: wait 800ms, retry
+→ Give up after 3 attempts</pre>
+
+<h3>Linear Backoff</h3>
+<p>Delay stays constant: 200ms, 200ms, 200ms...</p>
+<pre>Attempt 1: wait 200ms, retry
+Attempt 2: wait 200ms, retry
+Attempt 3: wait 200ms, retry
+→ Give up after 3 attempts</pre>
+
+<h2>Managing via Admin UI</h2>
+
+<p>Open the <strong>Resilience</strong> page in the Admin UI to see circuit breaker state per cluster and configure policies through modals.</p>
+
+<h2>Managing via API</h2>
+
+<div class="try-it">
+<h4>Try it: Create a resilience policy</h4>
+<pre># The policy is stored in GatewayResiliencePolicy table
+# Use the Admin UI "Resilience" page, or insert directly:
+#
+# INSERT INTO GatewayResiliencePolicy
+#   (ClusterId, RetryMaxAttempts, RetryBackoffType, RetryDelayMs,
+#    CircuitEnabled, CircuitFailureRatio, CircuitBreakMs, TimeoutMs)
+# VALUES
+#   ('orders-service', 3, 'Exponential', 200, 1, 0.5, 30000, 10000)</pre>
+</div>
+
+<h2>Pipeline Caching</h2>
+
+<div class="card">
+    <h3>ResiliencePipelineRegistry</h3>
+    <p>Pipelines are expensive to build. The <code>ResiliencePipelineRegistry</code> caches them by cluster ID:</p>
+    <pre>// Get or create pipeline for a cluster
+var pipeline = registry.GetOrCreate(policy);
+
+// When config changes, invalidate the cache
+registry.Invalidate("orders-service");
+
+// Clear all cached pipelines
+registry.Clear();</pre>
+    <p>The registry uses <code>ConcurrentDictionary</code> for thread-safe access.</p>
+</div>
+
+<h2>What Gets Retried</h2>
+
+<p>Only <code>HttpRequestException</code> triggers retries. This covers:</p>
+<ul style="color:var(--text-muted);padding-left:24px;margin:16px 0">
+    <li>Connection refused (upstream down)</li>
+    <li>DNS resolution failures</li>
+    <li>TCP connection timeouts</li>
+</ul>
+<p>HTTP error responses (4xx, 5xx) do <strong>not</strong> trigger retries by default. To change this, modify the <code>ShouldHandle</code> predicate in <code>ResiliencePipelineFactory</code>.</p>
+
+</div>
+<div class="footer">SmartGateway Documentation &mdash; Built with YARP &amp; .NET 10</div>
+</body>
+</html>

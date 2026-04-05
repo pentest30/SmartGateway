@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartGateway — Documentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        :root{--bg:#0d1720;--card:#13202e;--accent:#00d4aa;--text:#e8edf2;--text-muted:#8899aa;--border:#1e3248;--code-bg:#0a1219}
+        body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);line-height:1.7;min-height:100vh}
+        .hero{text-align:center;padding:80px 24px 60px}
+        .hero-logo{display:inline-flex;align-items:center;gap:14px;margin-bottom:24px}
+        .logo-mark{width:48px;height:48px;background:var(--accent);border-radius:12px;display:flex;align-items:center;justify-content:center}
+        .logo-mark svg{width:28px;height:28px}
+        .hero h1{font-size:48px;font-weight:800;letter-spacing:-1px}
+        .hero h1 span{color:var(--accent)}
+        .hero p{font-size:20px;color:var(--text-muted);max-width:640px;margin:16px auto 32px}
+        .hero-badges{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+        .badge{font-family:'JetBrains Mono',monospace;font-size:12px;padding:4px 12px;border-radius:6px;border:1px solid var(--border);color:var(--text-muted)}
+        .badge-accent{background:rgba(0,212,170,0.1);color:var(--accent);border-color:rgba(0,212,170,0.25)}
+        .container{max-width:960px;margin:0 auto;padding:0 24px 80px}
+        h2{font-size:28px;font-weight:700;margin:48px 0 24px;text-align:center}
+        .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin:24px 0}
+        .doc-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;text-decoration:none;transition:all .2s;display:block}
+        .doc-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,212,170,0.08)}
+        .doc-num{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);margin-bottom:8px;opacity:0.7}
+        .doc-card h3{font-size:17px;font-weight:700;color:var(--text);margin-bottom:8px}
+        .doc-card p{font-size:14px;color:var(--text-muted);margin:0;line-height:1.6}
+        .doc-card .tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--code-bg);color:var(--text-muted);padding:2px 6px;border-radius:3px;margin-top:12px}
+        .quick-start{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:32px;margin:40px 0}
+        .quick-start h3{font-size:20px;font-weight:700;margin-bottom:16px}
+        pre{background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:16px;font-family:'JetBrains Mono',monospace;font-size:13px;overflow-x:auto;color:var(--text);margin:12px 0;line-height:1.6}
+        .feature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:24px 0}
+        .feature{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center}
+        .feature-icon{font-size:24px;margin-bottom:8px}
+        .feature h4{font-size:14px;font-weight:600;margin-bottom:4px}
+        .feature p{font-size:12px;color:var(--text-muted);margin:0}
+        .footer{text-align:center;padding:40px;color:var(--text-muted);font-size:13px;border-top:1px solid var(--border);margin-top:64px}
+        .footer a{color:var(--accent);text-decoration:none}
+    </style>
+</head>
+<body>
+
+<div class="hero">
+    <div class="hero-logo">
+        <div class="logo-mark">
+            <svg viewBox="0 0 16 16" fill="none" stroke="#0a1a14" stroke-width="2" stroke-linecap="round">
+                <path d="M2 8h3M11 8h3M8 2v3M8 11v3"/>
+                <circle cx="8" cy="8" r="2.5" fill="#0a1a14" stroke="none"/>
+            </svg>
+        </div>
+    </div>
+    <h1>Smart<span>Gateway</span></h1>
+    <p>A programmable, database-driven API gateway built on YARP for .NET distributed systems. Zero-downtime config changes, visual admin UI, 141 tests.</p>
+    <div class="hero-badges">
+        <span class="badge badge-accent">.NET 10</span>
+        <span class="badge badge-accent">YARP 2.3</span>
+        <span class="badge">SQL Server</span>
+        <span class="badge">Polly v8</span>
+        <span class="badge">Blazor</span>
+        <span class="badge">141 tests</span>
+    </div>
+</div>
+
+<div class="container">
+
+<h2>Documentation</h2>
+
+<div class="grid">
+    <a href="01-getting-started.html" class="doc-card">
+        <div class="doc-num">01</div>
+        <h3>Getting Started</h3>
+        <p>Install prerequisites, start SQL Server, run the gateway, create your first route.</p>
+        <span class="tag">beginner</span>
+    </a>
+    <a href="02-routing-clusters.html" class="doc-card">
+        <div class="doc-num">02</div>
+        <h3>Routing & Clusters</h3>
+        <p>Path patterns, host matching, header matching, priority ordering, cluster configuration.</p>
+        <span class="tag">core</span>
+    </a>
+    <a href="03-load-balancing.html" class="doc-card">
+        <div class="doc-num">03</div>
+        <h3>Load Balancing</h3>
+        <p>RoundRobin, Weighted, and LatencyAware policies with statistical distribution.</p>
+        <span class="tag">core</span>
+    </a>
+    <a href="04-health-checks.html" class="doc-card">
+        <div class="doc-num">04</div>
+        <h3>Health Checks</h3>
+        <p>Active probing, automatic eviction, recovery flow, passive health via YARP.</p>
+        <span class="tag">operations</span>
+    </a>
+    <a href="05-service-registry.html" class="doc-card">
+        <div class="doc-num">05</div>
+        <h3>Service Registry</h3>
+        <p>Self-registration, heartbeat TTL, auto-expiry, Kubernetes-style discovery.</p>
+        <span class="tag">operations</span>
+    </a>
+    <a href="06-resilience.html" class="doc-card">
+        <div class="doc-num">06</div>
+        <h3>Resilience</h3>
+        <p>Polly v8 circuit breakers, retry with backoff, per-request timeouts.</p>
+        <span class="tag">advanced</span>
+    </a>
+    <a href="07-authentication.html" class="doc-card">
+        <div class="doc-num">07</div>
+        <h3>Authentication</h3>
+        <p>API Key auth per route, SHA256 hashing, key management via Admin UI.</p>
+        <span class="tag">security</span>
+    </a>
+    <a href="08-rate-limiting.html" class="doc-card">
+        <div class="doc-num">08</div>
+        <h3>Rate Limiting</h3>
+        <p>FixedWindow, SlidingWindow, TokenBucket strategies per route.</p>
+        <span class="tag">security</span>
+    </a>
+    <a href="09-canary-deployments.html" class="doc-card">
+        <div class="doc-num">09</div>
+        <h3>Canary Deployments</h3>
+        <p>Weighted traffic splitting with visual sliders for gradual rollout.</p>
+        <span class="tag">advanced</span>
+    </a>
+    <a href="10-transforms.html" class="doc-card">
+        <div class="doc-num">10</div>
+        <h3>Transforms</h3>
+        <p>Request/response header injection, removal, path prefix stripping.</p>
+        <span class="tag">advanced</span>
+    </a>
+    <a href="11-admin-ui.html" class="doc-card">
+        <div class="doc-num">11</div>
+        <h3>Admin UI Guide</h3>
+        <p>Walkthrough of all 11 Blazor pages — dashboard, clusters, health, audit.</p>
+        <span class="tag">guide</span>
+    </a>
+</div>
+
+<div class="quick-start">
+    <h3>Quick Start</h3>
+    <pre># Start SQL Server
+docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=YourStrong@Passw0rd" \
+  -p 1433:1433 -d mcr.microsoft.com/mssql/server:2022-latest
+
+# Start the gateway
+cd src/SmartGateway.Host && dotnet run --urls http://localhost:5000
+
+# Start the admin API
+cd src/SmartGateway.Api && dotnet run --no-launch-profile --urls http://localhost:5002
+
+# Create a route and test
+curl -X POST http://localhost:5002/admin/api/clusters \
+  -H "Content-Type: application/json" \
+  -d '{"clusterId":"my-api","loadBalancing":"RoundRobin"}'
+
+curl -X POST http://localhost:5002/admin/api/services/register \
+  -H "Content-Type: application/json" \
+  -d '{"clusterId":"my-api","destinationId":"inst-1","address":"http://localhost:3000"}'
+
+curl -X POST http://localhost:5000/_admin/reload
+curl http://localhost:5000/api/hello</pre>
+</div>
+
+</div>
+
+<div class="footer">
+    SmartGateway &mdash; Built with YARP &amp; .NET 10<br>
+    <a href="https://github.com/pentest30/SmartGateway">GitHub Repository</a>
+</div>
+
+</body>
+</html>
