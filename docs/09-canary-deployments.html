@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Canary Deployments - SmartGateway Documentation</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0d1720;--surface:#13202e;--surface2:#182a3a;--border:#1e3348;
+    --accent:#00d4aa;--accent2:#6c5ce7;--text:#e8edf2;--text2:#a4b3c4;--text3:#5e7a94;
+    --success:#00d4aa;--danger:#ff4757;--warn:#ffa502;
+    --font:'Syne',sans-serif;--mono:'JetBrains Mono',monospace;
+    --radius:10px;--radius-sm:6px;
+  }
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--text);font-family:var(--font);line-height:1.7;font-size:15px}
+  a{color:var(--accent);text-decoration:none;transition:opacity .2s}
+  a:hover{opacity:.8}
+
+  .navbar{position:sticky;top:0;z-index:100;background:rgba(13,23,32,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0 32px}
+  .nav-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;height:56px;gap:24px;overflow-x:auto}
+  .nav-brand{font-weight:800;font-size:17px;color:var(--accent);white-space:nowrap;letter-spacing:-.3px}
+  .nav-links{display:flex;gap:6px;flex:1;overflow-x:auto;scrollbar-width:none}
+  .nav-links::-webkit-scrollbar{display:none}
+  .nav-link{font-size:12.5px;padding:6px 11px;border-radius:var(--radius-sm);color:var(--text2);white-space:nowrap;transition:all .2s;font-weight:500}
+  .nav-link:hover{background:var(--surface);color:var(--text)}
+  .nav-link.active{background:rgba(0,212,170,.1);color:var(--accent)}
+
+  .container{max-width:920px;margin:0 auto;padding:48px 32px 80px}
+
+  .hero{margin-bottom:56px}
+  .hero-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin-bottom:10px}
+  .hero h1{font-size:40px;font-weight:800;line-height:1.15;letter-spacing:-.5px;margin-bottom:14px}
+  .hero p{font-size:17px;color:var(--text2);max-width:640px;line-height:1.7}
+
+  section{margin-bottom:56px}
+  h2{font-size:26px;font-weight:700;margin-bottom:18px;letter-spacing:-.3px;padding-top:8px;border-top:1px solid var(--border)}
+  h3{font-size:19px;font-weight:600;margin-bottom:12px;color:var(--text)}
+  p,li{color:var(--text2);line-height:1.8}
+  p{margin-bottom:14px}
+  ul,ol{margin-left:20px;margin-bottom:16px}
+  li{margin-bottom:6px}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px}
+  .card-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px}
+
+  pre{background:#0a1018;border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;overflow-x:auto;margin-bottom:20px;line-height:1.65}
+  code{font-family:var(--mono);font-size:13px}
+  pre code{color:#c8d6e5}
+  :not(pre)>code{background:var(--surface2);padding:2px 7px;border-radius:4px;font-size:13px;color:var(--accent)}
+
+  .info-box{border-left:3px solid var(--accent);background:rgba(0,212,170,.06);padding:16px 20px;border-radius:0 var(--radius) var(--radius) 0;margin-bottom:20px}
+  .info-box.warn{border-left-color:var(--warn);background:rgba(255,165,2,.06)}
+  .info-box.danger{border-left-color:var(--danger);background:rgba(255,71,87,.06)}
+  .info-box strong{color:var(--text);font-weight:600}
+
+  table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:14px}
+  th{text-align:left;font-weight:600;color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:1px;padding:10px 14px;border-bottom:1px solid var(--border)}
+  td{padding:12px 14px;border-bottom:1px solid var(--border);color:var(--text2)}
+  tr:hover td{background:rgba(0,212,170,.03)}
+
+  .steps{counter-reset:step}
+  .step{counter-increment:step;position:relative;padding-left:48px;margin-bottom:32px}
+  .step::before{content:counter(step);position:absolute;left:0;top:0;width:32px;height:32px;border-radius:50%;background:rgba(0,212,170,.12);color:var(--accent);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,212,170,.25)}
+  .step h3{margin-bottom:8px}
+
+  /* ── Weight bar visualization ── */
+  .weight-viz{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px}
+  .weight-row{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+  .weight-row:last-child{margin-bottom:0}
+  .weight-label{width:100px;font-size:13px;font-weight:600;color:var(--text)}
+  .weight-bar-track{flex:1;height:28px;background:var(--surface2);border-radius:4px;overflow:hidden;position:relative}
+  .weight-bar-fill{height:100%;border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--bg);transition:width .3s}
+  .weight-pct{width:60px;text-align:right;font-family:var(--mono);font-size:13px;color:var(--text3)}
+
+  /* ── Timeline ── */
+  .timeline{position:relative;padding-left:32px;margin-bottom:24px}
+  .timeline::before{content:'';position:absolute;left:11px;top:4px;bottom:4px;width:2px;background:var(--border)}
+  .tl-item{position:relative;margin-bottom:24px}
+  .tl-item::before{content:'';position:absolute;left:-26px;top:6px;width:12px;height:12px;border-radius:50%;background:var(--accent);border:2px solid var(--bg)}
+  .tl-item.warn::before{background:var(--warn)}
+  .tl-item.done::before{background:var(--success)}
+  .tl-time{font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:2px}
+  .tl-desc{font-size:14px;color:var(--text2)}
+
+  /* ── Traffic split visual ── */
+  .traffic-split{display:flex;height:12px;border-radius:6px;overflow:hidden;margin-bottom:8px}
+  .traffic-v1{background:var(--accent2)}
+  .traffic-v2{background:var(--accent)}
+
+  .flow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px;padding:20px;background:var(--surface);border-radius:var(--radius);border:1px solid var(--border)}
+  .flow-step{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 16px;font-size:13px;font-weight:500;color:var(--text);text-align:center;min-width:90px}
+  .flow-arrow{color:var(--accent);font-size:20px;font-weight:700}
+  .flow-step.v1{border-color:var(--accent2);background:rgba(108,92,231,.08);color:var(--accent2)}
+  .flow-step.v2{border-color:var(--accent);background:rgba(0,212,170,.08);color:var(--accent)}
+
+  .badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px}
+  .badge-green{background:rgba(0,212,170,.12);color:var(--success)}
+  .badge-purple{background:rgba(108,92,231,.12);color:var(--accent2)}
+
+  footer{border-top:1px solid var(--border);padding:32px;text-align:center;color:var(--text3);font-size:13px}
+  .kw{color:#c678dd} .str{color:#98c379} .cm{color:#5c6370;font-style:italic} .fn{color:#61afef} .num{color:#d19a66} .op{color:#56b6c2}
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-inner">
+    <div class="nav-brand">SmartGateway</div>
+    <div class="nav-links">
+      <a href="01-getting-started.html" class="nav-link">01 Getting Started</a>
+      <a href="02-architecture.html" class="nav-link">02 Architecture</a>
+      <a href="03-clusters.html" class="nav-link">03 Clusters</a>
+      <a href="04-routes.html" class="nav-link">04 Routes</a>
+      <a href="05-health-checks.html" class="nav-link">05 Health Checks</a>
+      <a href="06-resilience.html" class="nav-link">06 Resilience</a>
+      <a href="07-authentication.html" class="nav-link">07 Authentication</a>
+      <a href="08-rate-limiting.html" class="nav-link">08 Rate Limiting</a>
+      <a href="09-canary-deployments.html" class="nav-link active">09 Canary</a>
+      <a href="10-transforms.html" class="nav-link">10 Transforms</a>
+      <a href="11-admin-ui.html" class="nav-link">11 Admin UI</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="hero">
+    <div class="hero-label">Chapter 09</div>
+    <h1>Canary Deployments</h1>
+    <p>Roll out new service versions gradually using weighted destinations. SmartGateway's <code>Weight</code> field on each destination controls traffic distribution, letting you shift from 0% to 100% with real-time monitoring via the Admin UI's Canary page.</p>
+  </div>
+
+  <!-- Section 1: Concept -->
+  <section id="concept">
+    <h2>What Is a Canary Deployment?</h2>
+    <p>A canary deployment sends a small percentage of traffic to a new version of a service while the majority continues to hit the stable version. If the new version performs well (low errors, acceptable latency), you gradually increase its share. If problems appear, you roll back by setting its weight to zero.</p>
+
+    <div class="flow">
+      <div class="flow-step">100 requests<br>arrive</div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-step">SmartGateway<br>Weighted LB</div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-step v1">~91 requests<br>v1 (weight:100)</div>
+      <div class="flow-arrow" style="visibility:hidden">&#8594;</div>
+      <div class="flow-step v2">~9 requests<br>v2 (weight:10)</div>
+    </div>
+
+    <p>In SmartGateway, canary deployments are managed through the <code>Weight</code> property on <code>GatewayDestination</code>. When a cluster uses the <code>Weighted</code> load balancing policy, traffic is distributed proportionally to each destination's weight.</p>
+  </section>
+
+  <!-- Section 2: Weight Model -->
+  <section id="weight-model">
+    <h2>The Weight Model</h2>
+    <p>Each <code>GatewayDestination</code> has a <code>Weight</code> property (integer, default 100, range 0-100):</p>
+
+    <pre><code><span class="kw">public class</span> <span class="fn">GatewayDestination</span>
+{
+    <span class="kw">public int</span> Id { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public string</span> ClusterId { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public string</span> DestinationId { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public string</span> Address { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public bool</span> IsHealthy { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="kw">true</span>;
+    <span class="kw">public int</span> Weight { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="num">100</span>;          <span class="cm">// 0-100, controls traffic share</span>
+    <span class="kw">public</span> DateTime? LastHeartbeat { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public int</span> TtlSeconds { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="num">0</span>;
+}</code></pre>
+
+    <p>Traffic distribution is calculated as:</p>
+    <pre><code><span class="cm">// Traffic percentage for destination X:</span>
+percentage = (weight_x / sum_of_all_weights) * <span class="num">100</span>
+
+<span class="cm">// Example with two destinations:</span>
+<span class="cm">// v1 weight=100, v2 weight=10  -->  total=110</span>
+<span class="cm">// v1 gets 100/110 = 90.9% of traffic</span>
+<span class="cm">// v2 gets  10/110 =  9.1% of traffic</span></code></pre>
+  </section>
+
+  <!-- Section 3: Step by Step -->
+  <section id="walkthrough">
+    <h2>Step-by-Step Canary Rollout</h2>
+
+    <div class="steps">
+      <div class="step">
+        <h3>Ensure the cluster uses Weighted load balancing</h3>
+        <p>Your cluster must use the <code>Weighted</code> load balancing policy for weight-based distribution to take effect.</p>
+        <pre><code>curl -X POST http://localhost:5100/api/clusters \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "clusterId": "orders-svc",
+    "loadBalancing": "Weighted"
+  }'</span></code></pre>
+        <div class="info-box">
+          <strong>Existing cluster?</strong> Update the load balancing policy to <code>Weighted</code> via the Clusters page in the Admin UI or through the API.
+        </div>
+      </div>
+
+      <div class="step">
+        <h3>Verify the stable v1 destination exists</h3>
+        <p>The existing production destination should already be running with weight 100:</p>
+        <pre><code><span class="cm"># Existing destination: orders-v1 at weight 100</span>
+curl http://localhost:5100/api/services/orders-svc
+
+<span class="cm"># Response:</span>
+<span class="cm"># [</span>
+<span class="cm">#   {</span>
+<span class="cm">#     "destinationId": "orders-v1",</span>
+<span class="cm">#     "address": "http://10.0.1.10:8080",</span>
+<span class="cm">#     "weight": 100,</span>
+<span class="cm">#     "isHealthy": true</span>
+<span class="cm">#   }</span>
+<span class="cm"># ]</span></code></pre>
+      </div>
+
+      <div class="step">
+        <h3>Register the canary v2 destination with low weight</h3>
+        <p>Add the new version with a weight of 10 (about 9% of traffic):</p>
+        <pre><code>curl -X POST http://localhost:5100/api/services/register \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "clusterId": "orders-svc",
+    "destinationId": "orders-v2",
+    "address": "http://10.0.1.20:8080",
+    "weight": 10
+  }'</span></code></pre>
+
+        <p>Traffic distribution is now:</p>
+        <div class="weight-viz">
+          <div class="weight-row">
+            <div class="weight-label"><span class="badge badge-purple">v1</span></div>
+            <div class="weight-bar-track">
+              <div class="weight-bar-fill" style="width:90.9%;background:var(--accent2)">weight: 100</div>
+            </div>
+            <div class="weight-pct">90.9%</div>
+          </div>
+          <div class="weight-row">
+            <div class="weight-label"><span class="badge badge-green">v2</span></div>
+            <div class="weight-bar-track">
+              <div class="weight-bar-fill" style="width:9.1%;background:var(--accent)">10</div>
+            </div>
+            <div class="weight-pct">9.1%</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <h3>Monitor in the Admin UI Canary page</h3>
+        <p>Navigate to <code>/canary</code> in the Admin UI. You will see:</p>
+        <ul>
+          <li>Each cluster with its destinations listed</li>
+          <li>A <strong>range slider</strong> (0-100) for each destination's weight</li>
+          <li>Real-time percentage calculations</li>
+          <li>A stacked <strong>traffic distribution bar</strong> showing the visual split</li>
+          <li>Health indicators (<span class="badge badge-green">active</span> / evicted) for each destination</li>
+        </ul>
+      </div>
+
+      <div class="step">
+        <h3>Gradually increase v2 weight</h3>
+        <p>If v2 is healthy and performing well, use the slider or API to increase its weight:</p>
+
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-time">T+0 (initial deploy)</div>
+            <div class="tl-desc">v1=100, v2=10 &mdash; 9.1% to canary</div>
+            <div class="traffic-split" style="margin-top:8px"><div class="traffic-v1" style="width:90.9%"></div><div class="traffic-v2" style="width:9.1%"></div></div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-time">T+15min (looking good)</div>
+            <div class="tl-desc">v1=100, v2=25 &mdash; 20% to canary</div>
+            <div class="traffic-split" style="margin-top:8px"><div class="traffic-v1" style="width:80%"></div><div class="traffic-v2" style="width:20%"></div></div>
+          </div>
+          <div class="tl-item warn">
+            <div class="tl-time">T+30min (gaining confidence)</div>
+            <div class="tl-desc">v1=50, v2=50 &mdash; 50/50 split</div>
+            <div class="traffic-split" style="margin-top:8px"><div class="traffic-v1" style="width:50%"></div><div class="traffic-v2" style="width:50%"></div></div>
+          </div>
+          <div class="tl-item done">
+            <div class="tl-time">T+1hr (full rollout)</div>
+            <div class="tl-desc">v1=0, v2=100 &mdash; 100% to new version</div>
+            <div class="traffic-split" style="margin-top:8px"><div class="traffic-v1" style="width:0%"></div><div class="traffic-v2" style="width:100%"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <h3>Decommission v1</h3>
+        <p>Once v2 is fully rolled out, remove the old destination:</p>
+        <pre><code><span class="cm"># Remove the old v1 destination</span>
+curl -X POST http://localhost:5100/api/services/deregister \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"clusterId": "orders-svc", "destinationId": "orders-v1"}'</span></code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 4: Traffic Distribution -->
+  <section id="distribution">
+    <h2>Traffic Distribution Examples</h2>
+    <p>Here are common weight configurations and their resulting traffic splits:</p>
+
+    <table>
+      <thead>
+        <tr><th>v1 Weight</th><th>v2 Weight</th><th>v1 Traffic</th><th>v2 Traffic</th><th>Use Case</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>100</td><td>1</td><td>99.0%</td><td>1.0%</td><td>Smoke test with minimal exposure</td></tr>
+        <tr><td>100</td><td>10</td><td>90.9%</td><td>9.1%</td><td>Initial canary (recommended start)</td></tr>
+        <tr><td>100</td><td>25</td><td>80.0%</td><td>20.0%</td><td>Early confidence stage</td></tr>
+        <tr><td>100</td><td>50</td><td>66.7%</td><td>33.3%</td><td>Significant canary traffic</td></tr>
+        <tr><td>50</td><td>50</td><td>50.0%</td><td>50.0%</td><td>Equal split for A/B testing</td></tr>
+        <tr><td>25</td><td>100</td><td>20.0%</td><td>80.0%</td><td>Nearly complete rollout</td></tr>
+        <tr><td>0</td><td>100</td><td>0.0%</td><td>100.0%</td><td>Full rollout to v2</td></tr>
+      </tbody>
+    </table>
+
+    <div class="info-box">
+      <strong>Weight of 0:</strong> Setting a destination's weight to 0 effectively removes it from the load balancer without deleting it. This is useful for instant rollback -- just set v2's weight back to 0.
+    </div>
+  </section>
+
+  <!-- Section 5: Rollback -->
+  <section id="rollback">
+    <h2>Instant Rollback</h2>
+    <p>If the canary shows problems (errors, high latency), roll back instantly by setting the v2 weight to zero:</p>
+
+    <pre><code><span class="cm"># Emergency rollback: set v2 weight to 0</span>
+<span class="cm"># Use the Canary page slider or the API:</span>
+curl -X PUT http://localhost:5100/api/destinations/orders-v2 \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"weight": 0}'</span>
+
+<span class="cm"># All traffic immediately returns to v1</span></code></pre>
+
+    <div class="info-box danger">
+      <strong>Why not delete?</strong> Setting weight to 0 is better than deleting the destination because: (1) you preserve the configuration for later retry, (2) the audit log records a weight change rather than a deletion, and (3) you can resume the rollout by increasing the weight again.
+    </div>
+  </section>
+
+  <!-- Section 6: Admin UI Canary Page -->
+  <section id="admin-ui">
+    <h2>The Admin UI Canary Page</h2>
+    <p>The Canary page at <code>/canary</code> provides a visual interface for managing weighted deployments.</p>
+
+    <div class="card">
+      <div class="card-title">Page Layout</div>
+      <p>Each cluster with destinations is displayed as a card containing:</p>
+      <ul style="margin-bottom:0">
+        <li><strong>Cluster header:</strong> Shows the cluster ID, load balancing policy, destination count, and active status badge.</li>
+        <li><strong>Destination rows:</strong> Each destination has a health indicator dot, name, address, a range slider (0-100), the current weight value, and the calculated percentage.</li>
+        <li><strong>Traffic distribution bar:</strong> A horizontal stacked bar at the bottom showing each destination's proportional share. Healthy destinations show in accent color, evicted ones in red.</li>
+        <li><strong>Total weight:</strong> Displayed as a monospace value at the far right of the bar.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Using the Sliders</div>
+      <p style="margin-bottom:0">Drag any destination's slider to change its weight from 0 to 100. The change is saved immediately to the database when you release the slider. All percentages and the traffic distribution bar recalculate instantly. No page refresh or "Save" button is needed.</p>
+    </div>
+  </section>
+
+  <!-- Section 7: Multi-Destination Canary -->
+  <section id="multi-dest">
+    <h2>Multi-Destination Canary (3+ Versions)</h2>
+    <p>Canary deployments are not limited to two versions. You can have any number of destinations with different weights:</p>
+
+    <pre><code><span class="cm"># Three-way traffic split</span>
+<span class="cm"># v1 (stable):     weight 60  -->  54.5%</span>
+<span class="cm"># v2 (canary A):   weight 30  -->  27.3%</span>
+<span class="cm"># v3 (canary B):   weight 20  -->  18.2%</span>
+<span class="cm"># Total: 110</span></code></pre>
+
+    <div class="weight-viz">
+      <div class="weight-row">
+        <div class="weight-label" style="font-size:12px">v1 stable</div>
+        <div class="weight-bar-track">
+          <div class="weight-bar-fill" style="width:54.5%;background:var(--accent2)">weight: 60</div>
+        </div>
+        <div class="weight-pct">54.5%</div>
+      </div>
+      <div class="weight-row">
+        <div class="weight-label" style="font-size:12px">v2 canary-a</div>
+        <div class="weight-bar-track">
+          <div class="weight-bar-fill" style="width:27.3%;background:var(--accent)">weight: 30</div>
+        </div>
+        <div class="weight-pct">27.3%</div>
+      </div>
+      <div class="weight-row">
+        <div class="weight-label" style="font-size:12px">v3 canary-b</div>
+        <div class="weight-bar-track">
+          <div class="weight-bar-fill" style="width:18.2%;background:var(--warn)">weight: 20</div>
+        </div>
+        <div class="weight-pct">18.2%</div>
+      </div>
+    </div>
+
+    <p>This pattern is useful for A/B testing multiple feature variants against the current stable version.</p>
+  </section>
+
+  <!-- Section 8: Weighted LB Internals -->
+  <section id="internals">
+    <h2>How Weighted Load Balancing Works</h2>
+    <p>SmartGateway implements weighted load balancing through the <code>WeightedLoadBalancingPolicy</code> which reads weights from the database via <code>IDestinationWeightProvider</code>:</p>
+
+    <pre><code><span class="cm">// Simplified flow inside WeightedLoadBalancingPolicy</span>
+
+<span class="cm">// 1. Get all healthy destinations for the cluster</span>
+<span class="kw">var</span> destinations = availableDestinations;
+
+<span class="cm">// 2. Read weights from the database via IDestinationWeightProvider</span>
+<span class="kw">var</span> weights = <span class="kw">await</span> _weightProvider.<span class="fn">GetWeightsAsync</span>(clusterId);
+
+<span class="cm">// 3. Build a weighted selection</span>
+<span class="cm">//    Random number [0, totalWeight) picks the destination</span>
+<span class="kw">var</span> totalWeight = destinations.<span class="fn">Sum</span>(d =&gt; weights[d.DestinationId]);
+<span class="kw">var</span> random = Random.Shared.<span class="fn">Next</span>(totalWeight);
+
+<span class="kw">var</span> cumulative = <span class="num">0</span>;
+<span class="kw">foreach</span> (<span class="kw">var</span> dest <span class="kw">in</span> destinations)
+{
+    cumulative += weights[dest.DestinationId];
+    <span class="kw">if</span> (random &lt; cumulative)
+        <span class="kw">return</span> dest;  <span class="cm">// Selected!</span>
+}</code></pre>
+
+    <div class="info-box">
+      <strong>Health-aware:</strong> The weighted load balancer only considers destinations where <code>IsHealthy = true</code>. If v2 becomes unhealthy, all its traffic automatically routes to v1 regardless of weights.
+    </div>
+  </section>
+
+  <!-- Section 9: Best Practices -->
+  <section id="best-practices">
+    <h2>Canary Best Practices</h2>
+
+    <div class="card">
+      <div class="card-title">1. Start small</div>
+      <p style="margin-bottom:0">Begin with weight 1-10 for the canary (1-9% traffic). This limits blast radius while still generating enough traffic for meaningful metrics.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">2. Monitor before increasing</div>
+      <p style="margin-bottom:0">Wait at least 10-15 minutes at each weight level. Check error rates, latency percentiles, and log output before increasing the canary's share.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">3. Use health checks</div>
+      <p style="margin-bottom:0">Configure active health probes on the canary destination. If v2 starts failing health checks, it will be automatically evicted -- an automatic rollback.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">4. Keep v1 around</div>
+      <p style="margin-bottom:0">Don't delete v1 until v2 has been running at 100% weight for a meaningful period (hours or days). Set v1's weight to 0 but keep it registered for fast rollback.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">5. Audit trail</div>
+      <p style="margin-bottom:0">All weight changes are logged in the Audit Log. Review <code>/audit</code> to track who changed what weights and when -- essential for incident post-mortems.</p>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  SmartGateway Documentation &mdash; API Gateway built on YARP
+</footer>
+
+</body>
+</html>

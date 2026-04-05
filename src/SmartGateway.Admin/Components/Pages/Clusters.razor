@@ -1,0 +1,166 @@
+@page "/clusters"
+@using Microsoft.EntityFrameworkCore
+@using SmartGateway.Core.Data
+@using SmartGateway.Core.Entities
+@inject IDbContextFactory<SmartGatewayDbContext> DbFactory
+@rendermode InteractiveServer
+
+<PageTitle>Clusters - SmartGateway</PageTitle>
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Clusters</div>
+        <div class="page-sub">Upstream service groups and load balancing</div>
+    </div>
+    <div style="margin-left:auto">
+        <button class="btn btn-primary" @onclick="() => _showModal = true">+ New Cluster</button>
+    </div>
+</div>
+
+@if (_clusters == null)
+{
+    <div class="card"><div style="color:var(--text3)">Loading...</div></div>
+}
+else if (_clusters.Count == 0)
+{
+    <div class="card">
+        <div class="empty-state">
+            <div class="empty-title">No clusters configured</div>
+            <div class="empty-desc">Get started by creating your first upstream cluster.</div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="grid-2">
+        @foreach (var cluster in _clusters)
+        {
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title">@cluster.ClusterId</div>
+                        <div class="card-sub">@cluster.LoadBalancing · @cluster.Destinations.Count destination(s)</div>
+                    </div>
+                    @if (cluster.IsActive)
+                    {
+                        var healthy = cluster.Destinations.Count(d => d.IsHealthy);
+                        var total = cluster.Destinations.Count;
+                        @if (total == 0 || healthy == total)
+                        {
+                            <span class="badge badge-green"><span class="badge-dot"></span>healthy</span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-warn"><span class="badge-dot"></span>degraded</span>
+                        }
+                    }
+                    else
+                    {
+                        <span class="badge badge-red"><span class="badge-dot"></span>inactive</span>
+                    }
+                </div>
+                @foreach (var dest in cluster.Destinations)
+                {
+                    <div class="dest-row">
+                        <div class="dest-indicator" style="background:@(dest.IsHealthy ? "var(--success)" : "var(--danger)")"></div>
+                        <div class="dest-addr">@dest.Address</div>
+                        <div class="dest-weight">w:@dest.Weight</div>
+                        @if (dest.IsHealthy)
+                        {
+                            <span class="badge badge-green" style="font-size:10px">active</span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-red" style="font-size:10px">evicted</span>
+                        }
+                    </div>
+                }
+                <div style="display:flex;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+                    @if (cluster.IsActive)
+                    {
+                        <button class="btn btn-ghost btn-sm" @onclick="() => ToggleActive(cluster.ClusterId, false)">Deactivate</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-ghost btn-sm" @onclick="() => ToggleActive(cluster.ClusterId, true)">Activate</button>
+                    }
+                    <div style="margin-left:auto">
+                        <button class="btn btn-danger btn-sm" @onclick="() => DeleteCluster(cluster.ClusterId)">Delete</button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@if (_showModal)
+{
+    <div class="modal-overlay open" @onclick="OnOverlayClick">
+        <div class="modal" @onclick:stopPropagation="true">
+            <div class="modal-title">New Cluster</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <div class="form-label">Cluster ID</div>
+                    <input @bind="_newClusterId" class="form-input" placeholder="e.g. orders-service" />
+                </div>
+                <div class="form-group">
+                    <div class="form-label">Load balancing</div>
+                    <select @bind="_newLbPolicy" class="form-select">
+                        <option value="RoundRobin">RoundRobin</option>
+                        <option value="LeastRequests">LeastRequests</option>
+                        <option value="PowerOfTwoChoices">PowerOfTwoChoices</option>
+                        <option value="Random">Random</option>
+                        <option value="Weighted">Weighted</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" @onclick="() => _showModal = false">Cancel</button>
+                <button class="btn btn-primary" @onclick="AddCluster">Create cluster</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<GatewayCluster>? _clusters;
+    private bool _showModal;
+    private string _newClusterId = "", _newLbPolicy = "RoundRobin";
+
+    protected override async Task OnInitializedAsync() => await LoadClusters();
+
+    private void OnOverlayClick() => _showModal = false;
+
+    private async Task LoadClusters()
+    {
+        using var context = await DbFactory.CreateDbContextAsync();
+        _clusters = await context.Clusters.AsNoTracking().Include(c => c.Destinations).OrderBy(c => c.ClusterId).ToListAsync();
+    }
+
+    private async Task AddCluster()
+    {
+        if (string.IsNullOrWhiteSpace(_newClusterId)) return;
+        using var context = await DbFactory.CreateDbContextAsync();
+        context.Clusters.Add(new GatewayCluster { ClusterId = _newClusterId.Trim(), LoadBalancing = _newLbPolicy });
+        await context.SaveChangesAsync();
+        _newClusterId = "";
+        _showModal = false;
+        await LoadClusters();
+    }
+
+    private async Task ToggleActive(string id, bool active)
+    {
+        using var context = await DbFactory.CreateDbContextAsync();
+        var c = await context.Clusters.FindAsync(id);
+        if (c != null) { c.IsActive = active; c.UpdatedAt = DateTime.UtcNow; await context.SaveChangesAsync(); }
+        await LoadClusters();
+    }
+
+    private async Task DeleteCluster(string id)
+    {
+        using var context = await DbFactory.CreateDbContextAsync();
+        var c = await context.Clusters.FindAsync(id);
+        if (c != null) { context.Clusters.Remove(c); await context.SaveChangesAsync(); }
+        await LoadClusters();
+    }
+}

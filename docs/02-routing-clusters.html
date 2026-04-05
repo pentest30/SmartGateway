@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Routing &amp; Clusters - SmartGateway Documentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0d1720;
+            --card: #13202e;
+            --accent: #00d4aa;
+            --accent-dim: #00d4aa33;
+            --text: #e8edf2;
+            --text-muted: #8899aa;
+            --border: #1e3248;
+            --code-bg: #0a1219;
+            --success: #00d4aa;
+            --warning: #f0b429;
+            --error: #ff6b6b;
+        }
+
+        body {
+            font-family: 'Syne', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            min-height: 100vh;
+        }
+
+        nav {
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(12px);
+        }
+
+        nav .nav-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            height: 64px;
+            overflow-x: auto;
+        }
+
+        nav .logo {
+            font-weight: 800;
+            font-size: 1.15rem;
+            color: var(--accent);
+            white-space: nowrap;
+            letter-spacing: -0.5px;
+        }
+
+        nav a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            white-space: nowrap;
+            padding: 0.3rem 0.7rem;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        nav a:hover { color: var(--text); background: var(--accent-dim); }
+        nav a.active { color: var(--accent); background: var(--accent-dim); }
+
+        main {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 3rem 2rem 5rem;
+        }
+
+        .hero {
+            text-align: center;
+            padding: 3rem 0 4rem;
+        }
+
+        .hero .badge {
+            display: inline-block;
+            background: var(--accent-dim);
+            color: var(--accent);
+            padding: 0.35rem 1rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .hero h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            line-height: 1.15;
+            margin-bottom: 1rem;
+            letter-spacing: -1px;
+        }
+
+        .hero h1 span { color: var(--accent); }
+        .hero p { color: var(--text-muted); font-size: 1.1rem; max-width: 640px; margin: 0 auto; }
+
+        h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 3rem 0 1.5rem;
+            letter-spacing: -0.5px;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        h2 .step-num {
+            display: inline-block;
+            background: var(--accent);
+            color: var(--bg);
+            width: 36px;
+            height: 36px;
+            line-height: 36px;
+            text-align: center;
+            border-radius: 50%;
+            font-size: 1rem;
+            font-weight: 800;
+            margin-right: 0.75rem;
+            vertical-align: middle;
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin: 2rem 0 1rem;
+            color: var(--accent);
+        }
+
+        p { margin-bottom: 1rem; }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 1.5rem 0;
+        }
+
+        .card h4 { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .card p { color: var(--text-muted); font-size: 0.92rem; }
+
+        pre {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 1rem 0 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.65;
+            position: relative;
+        }
+
+        pre .label {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--border);
+            color: var(--text-muted);
+            padding: 0.2rem 0.75rem;
+            border-radius: 0 9px 0 8px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        code { font-family: 'JetBrains Mono', monospace; }
+
+        p code, li code, td code {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            padding: 0.15rem 0.45rem;
+            border-radius: 5px;
+            font-size: 0.82rem;
+        }
+
+        .kw { color: #c792ea; }
+        .str { color: #c3e88d; }
+        .fn { color: #82aaff; }
+        .cm { color: #546e7a; }
+        .num { color: #f78c6c; }
+        .acc { color: #00d4aa; }
+        .flag { color: #f0b429; }
+
+        .try-it {
+            background: linear-gradient(135deg, #0a1a14, #13202e);
+            border: 1px solid #1a3a2a;
+            border-left: 4px solid var(--accent);
+            border-radius: 10px;
+            padding: 1.75rem 2rem;
+            margin: 1.5rem 0;
+        }
+
+        .try-it h4 {
+            color: var(--accent);
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .try-it p { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem; }
+
+        .diagram {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 2rem 0;
+            overflow-x: auto;
+            text-align: center;
+        }
+
+        .diagram pre {
+            background: none;
+            border: none;
+            padding: 0;
+            margin: 0;
+            display: inline-block;
+            text-align: left;
+            color: var(--text-muted);
+        }
+
+        .diagram .title {
+            display: block;
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--text);
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        ul, ol { margin: 0.75rem 0 1.25rem 1.5rem; }
+        li { margin-bottom: 0.5rem; color: var(--text-muted); }
+        li strong { color: var(--text); }
+
+        table { width: 100%; border-collapse: collapse; margin: 1.25rem 0; font-size: 0.9rem; }
+        th, td { border: 1px solid var(--border); padding: 0.75rem 1rem; text-align: left; }
+        th { background: var(--card); font-weight: 700; color: var(--accent); }
+        td { color: var(--text-muted); }
+
+        .callout {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--warning);
+            border-radius: 8px;
+            padding: 1.25rem 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .callout.info { border-left-color: #5bc0eb; }
+        .callout.success { border-left-color: var(--accent); }
+
+        .callout strong { display: block; margin-bottom: 0.35rem; font-size: 0.9rem; }
+        .callout p { font-size: 0.88rem; color: var(--text-muted); margin: 0; }
+
+        footer {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+            text-align: center;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        footer span { color: var(--accent); font-weight: 700; }
+
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2rem; }
+            main { padding: 2rem 1rem; }
+            nav .nav-inner { gap: 0.75rem; }
+            nav a { font-size: 0.75rem; padding: 0.2rem 0.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <div class="nav-inner">
+        <span class="logo">SmartGateway</span>
+        <a href="01-getting-started.html">Getting Started</a>
+        <a href="02-routing-clusters.html" class="active">Routing</a>
+        <a href="03-load-balancing.html">Load Balancing</a>
+        <a href="04-health-checks.html">Health Checks</a>
+        <a href="05-service-registry.html">Service Registry</a>
+        <a href="06-resilience.html">Resilience</a>
+    </div>
+</nav>
+
+<main>
+
+<div class="hero">
+    <span class="badge">CHAPTER 02</span>
+    <h1>Routing &amp; <span>Clusters</span></h1>
+    <p>Learn how YARP matches incoming requests to clusters, and how to configure path patterns, host matching, method filtering, header matching, and priority ordering.</p>
+</div>
+
+<!-- Concepts -->
+<h2><span class="step-num">1</span> Core Concepts</h2>
+
+<div class="diagram">
+    <span class="title">How Route Matching Works in YARP</span>
+    <pre>
+  <span class="acc">Incoming Request</span>
+  GET /api/users HTTP/1.1
+  Host: api.example.com
+  X-Version: v2
+         |
+         v
+  +-------------------------------+
+  | <span class="kw">YARP Route Matching Engine</span>     |
+  |                               |
+  |  For each route (by Priority):|
+  |  1. Check <span class="fn">Path</span> pattern        |
+  |  2. Check <span class="fn">Hosts</span> list          |
+  |  3. Check <span class="fn">Methods</span> list        |
+  |  4. Check <span class="fn">Headers</span> match       |
+  |                               |
+  |  First match wins!            |
+  +-------------------------------+
+         |
+         v
+  +-------------------------------+
+  |  Matched Route: <span class="str">"api-v2"</span>      |
+  |  -> ClusterId: <span class="str">"backend-v2"</span>  |
+  +-------------------------------+
+         |
+         v
+  <span class="acc">Forward to cluster destinations</span>
+    </pre>
+</div>
+
+<p>In SmartGateway, routing is stored in the <code>GatewayRoute</code> table and loaded into YARP's configuration by <code>DatabaseProxyConfigProvider</code>. Each route has these matching criteria:</p>
+
+<table>
+    <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+    <tr><td><code>RouteId</code></td><td>string</td><td>Unique identifier for the route</td></tr>
+    <tr><td><code>ClusterId</code></td><td>string</td><td>Which cluster to forward matching requests to</td></tr>
+    <tr><td><code>PathPattern</code></td><td>string</td><td>URL path pattern (supports <code>{**catch-all}</code>)</td></tr>
+    <tr><td><code>Hosts</code></td><td>string</td><td>Comma-separated list of hostnames</td></tr>
+    <tr><td><code>Methods</code></td><td>string</td><td>Comma-separated HTTP methods (GET, POST, etc.)</td></tr>
+    <tr><td><code>MatchHeader</code></td><td>string</td><td>Header name to match on</td></tr>
+    <tr><td><code>MatchHeaderValue</code></td><td>string</td><td>Required header value</td></tr>
+    <tr><td><code>Priority</code></td><td>int</td><td>Lower number = higher priority (evaluated first)</td></tr>
+    <tr><td><code>IsActive</code></td><td>bool</td><td>Only active routes are loaded into YARP</td></tr>
+</table>
+
+<!-- Path Pattern Matching -->
+<h2><span class="step-num">2</span> Path Pattern Matching</h2>
+
+<p>YARP uses ASP.NET Core's route template syntax. The most powerful pattern is the <strong>catch-all</strong> parameter <code>{**catch-all}</code>, which captures the remainder of the path.</p>
+
+<h3>Catch-All Pattern</h3>
+<p>The pattern <code>/api/{**catch-all}</code> matches any path that starts with <code>/api/</code>:</p>
+
+<table>
+    <tr><th>Pattern</th><th>Request Path</th><th>Match?</th></tr>
+    <tr><td><code>/api/{**catch-all}</code></td><td><code>/api/users</code></td><td>Yes</td></tr>
+    <tr><td><code>/api/{**catch-all}</code></td><td><code>/api/users/123/orders</code></td><td>Yes</td></tr>
+    <tr><td><code>/api/{**catch-all}</code></td><td><code>/api</code></td><td>Yes</td></tr>
+    <tr><td><code>/api/{**catch-all}</code></td><td><code>/docs/intro</code></td><td>No</td></tr>
+</table>
+
+<div class="try-it">
+    <h4>Try it</h4>
+    <p>Create a catch-all route for an API backend:</p>
+    <pre>
+<span class="fn">curl</span> -X POST http://localhost:5002/admin/api/routes \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "routeId": "catch-all-api",
+    "clusterId": "my-api",
+    "pathPattern": "/api/{**catch-all}",
+    "priority": 10,
+    "isActive": true
+  }'</span>
+    </pre>
+</div>
+
+<h3>Exact Path Pattern</h3>
+<p>Without <code>{**catch-all}</code>, the pattern matches exactly:</p>
+
+<table>
+    <tr><th>Pattern</th><th>Request Path</th><th>Match?</th></tr>
+    <tr><td><code>/health</code></td><td><code>/health</code></td><td>Yes</td></tr>
+    <tr><td><code>/health</code></td><td><code>/health/check</code></td><td>No</td></tr>
+</table>
+
+<div class="try-it">
+    <h4>Try it</h4>
+    <p>Create an exact-path route for a health endpoint:</p>
+    <pre>
+<span class="fn">curl</span> -X POST http://localhost:5002/admin/api/routes \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "routeId": "health-exact",
+    "clusterId": "my-api",
+    "pathPattern": "/health",
+    "priority": 1,
+    "isActive": true
+  }'</span>
+    </pre>
+</div>
+
+<!-- Host Matching -->
+<h2><span class="step-num">3</span> Host Matching</h2>
+
+<p>Routes can be restricted to specific hostnames. This enables virtual hosting where the same gateway serves different backends based on the domain name.</p>
+
+<div class="diagram">
+    <span class="title">Host-Based Routing</span>
+    <pre>
+  <span class="acc">api.example.com</span>  ------>  Route "api-route"   -->  <span class="str">Cluster: api-backend</span>
+  <span class="acc">web.example.com</span>  ------>  Route "web-route"   -->  <span class="str">Cluster: web-backend</span>
+  <span class="acc">docs.example.com</span> ------>  Route "docs-route"  -->  <span class="str">Cluster: docs-backend</span>
+    </pre>
+</div>
+
+<p>The <code>Hosts</code> field is a comma-separated list. If set, YARP only matches the route when the <code>Host</code> header matches one of the listed hostnames.</p>
+
+<div class="try-it">
+    <h4>Try it</h4>
+    <p>Create a host-specific route:</p>
+    <pre>
+<span class="fn">curl</span> -X POST http://localhost:5002/admin/api/routes \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "routeId": "api-host-route",
+    "clusterId": "api-backend",
+    "pathPattern": "/{**catch-all}",
+    "hosts": "api.example.com,api.example.io",
+    "priority": 5,
+    "isActive": true
+  }'</span>
+
+<span class="cm"># Don't forget to reload YARP</span>
+<span class="fn">curl</span> -X POST http://localhost:5000/_admin/reload
+
+<span class="cm"># Test with a Host header</span>
+<span class="fn">curl</span> http://localhost:5000/users \
+  -H <span class="str">"Host: api.example.com"</span>
+    </pre>
+</div>
+
+<div class="callout info">
+    <strong>How YARP parses Hosts</strong>
+    <p>SmartGateway stores hosts as a comma-separated string. The <code>DatabaseProxyConfigProvider</code> splits it using <code>Hosts.Split(',', StringSplitOptions.TrimEntries)</code> and passes it as a string array to YARP's <code>RouteMatch.Hosts</code>.</p>
+</div>
+
+<!-- Method Filtering -->
+<h2><span class="step-num">4</span> Method Filtering</h2>
+
+<p>Restrict a route to specific HTTP methods. This is useful for separating read and write traffic to different clusters.</p>
+
+<div class="diagram">
+    <span class="title">Method-Based Routing</span>
+    <pre>
+  GET  /orders/{**catch-all}  -->  Route "orders-read"   -->  <span class="str">Cluster: read-replicas</span>
+  POST /orders/{**catch-all}  -->  Route "orders-write"  -->  <span class="str">Cluster: primary-db</span>
+  PUT  /orders/{**catch-all}  -->  Route "orders-write"  -->  <span class="str">Cluster: primary-db</span>
+    </pre>
+</div>
+
+<div class="try-it">
+    <h4>Try it</h4>
+    <p>Create separate read and write routes:</p>
+    <pre>
+<span class="cm"># Read route - only GET requests</span>
+<span class="fn">curl</span> -X POST http://localhost:5002/admin/api/routes \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "routeId": "orders-read",
+    "clusterId": "read-replicas",
+    "pathPattern": "/orders/{**catch-all}",
+    "methods": "GET",
+    "priority": 3,
+    "isActive": true
+  }'</span>
+
+<span class="cm"># Write route - POST, PUT, DELETE</span>
+<span class="fn">curl</span> -X POST http://localhost:5002/admin/api/routes \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "routeId": "orders-write",
+    "clusterId": "primary-db",
+    "pathPattern": "/orders/{**catch-all}",
+    "methods": "POST,PUT,DELETE",
+    "priority": 3,
+    "isActive": true
+  }'</span>
+
+<span class="cm"># Reload and test</span>
+<span class="fn">curl</span> -X POST http://localhost:5000/_admin/reload
+
+<span class="cm"># This hits read-replicas cluster</span>
+<span class="fn">curl</span> http://localhost:5000/orders/123
+
+<span class="cm"># This hits primary-db cluster</span>
+<span class="fn">curl</span> -X POST http://localhost:5000/orders \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"item": "widget", "quantity": 5}'</span>
+    </pre>
+</div>
+
+<!-- Header Matching -->
+<h2><span class="step-num">5</span> Header Matching</h2>
+
+<p>Routes can match on a specific HTTP header and its value. This is powerful for API versioning, canary releases, and A/B testing.</p>
+
+<div class="diagram">
+    <span class="title">Header-Based Routing (API Versioning)</span>
+    <pre>
+  X-Version: v1  -->  Route "api-v1"  -->  <span class="str">Cluster: backend-v1</span>
+  X-Version: v2  -->  Route "api-v2"  -->  <span class="str">Cluster: backend-v2</span>
+  (no header)    -->  Route "api-default" --> <span class="str">Cluster: backend-v2</span>  (catch-all)
+    </pre>
+</div>
+
+<p>SmartGateway uses two fields: <code>matchHeader</code> (the header name) and <code>matchHeaderValue</code> (the required value). The <code>DatabaseProxyConfigProvider</code> converts these into YARP's <code>RouteHeader</code> matching.</p>
+
+<div class="try-it">
+    <h4>Try it</h4>
+    <p>Implement API versioning via headers:</p>
+    <pre>
+<span class="cm"># V1 route - matches when X-Version: v1</span>
+<span class="fn">curl</span> -X POST http://localhost:5002/admin/api/routes \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "routeId": "api-v1",
+    "clusterId": "backend-v1",
+    "pathPattern": "/api/{**catch-all}",
+    "matchHeader": "X-Version",
+    "matchHeaderValue": "v1",
+    "priority": 1,
+    "isActive": true
+  }'</span>
+
+<span class="cm"># V2 route - matches when X-Version: v2</span>
+<span class="fn">curl</span> -X POST http://localhost:5002/admin/api/routes \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "routeId": "api-v2",
+    "clusterId": "backend-v2",
+    "pathPattern": "/api/{**catch-all}",
+    "matchHeader": "X-Version",
+    "matchHeaderValue": "v2",
+    "priority": 1,
+    "isActive": true
+  }'</span>
+
+<span class="cm"># Default route - no header restriction (lower priority)</span>
+<span class="fn">curl</span> -X POST http://localhost:5002/admin/api/routes \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "routeId": "api-default",
+    "clusterId": "backend-v2",
+    "pathPattern": "/api/{**catch-all}",
+    "priority": 10,
+    "isActive": true
+  }'</span>
+
+<span class="fn">curl</span> -X POST http://localhost:5000/_admin/reload
+
+<span class="cm"># Test: hits backend-v1</span>
+<span class="fn">curl</span> http://localhost:5000/api/users -H <span class="str">"X-Version: v1"</span>
+
+<span class="cm"># Test: hits backend-v2</span>
+<span class="fn">curl</span> http://localhost:5000/api/users -H <span class="str">"X-Version: v2"</span>
+
+<span class="cm"># Test: no header, falls through to default (backend-v2)</span>
+<span class="fn">curl</span> http://localhost:5000/api/users
+    </pre>
+</div>
+
+<!-- Priority Ordering -->
+<h2><span class="step-num">6</span> Priority Ordering</h2>
+
+<p>When multiple routes could match a request, <strong>priority</strong> determines which one wins. Lower numbers mean higher priority (evaluated first).</p>
+
+<div class="card">
+    <h4>The Priority Rule</h4>
+    <p>YARP evaluates routes in ascending <code>Priority</code> order. The first route whose criteria match the incoming request is selected. All remaining routes are skipped.</p>
+</div>
+
+<div class="diagram">
+    <span class="title">Priority Evaluation Order</span>
+    <pre>
+  Incoming: <span class="acc">GET /api/admin/dashboard</span>
+
+  Priority <span class="num">0</span>: Path=/api/admin/{**catch-all}  Host=*  Methods=*   <span class="acc">&lt;-- MATCH! Stop here.</span>
+  Priority <span class="num">5</span>: Path=/api/{**catch-all}        Host=*  Methods=GET   (never evaluated)
+  Priority <span class="num">10</span>: Path=/{**catch-all}            Host=*  Methods=*     (never evaluated)
+    </pre>
+</div>
+
+<p>A practical priority strategy:</p>
+
+<table>
+    <tr><th>Priority</th><th>Use Case</th><th>Example</th></tr>
+    <tr><td><code>0</code></td><td>Exact paths / special endpoints</td><td><code>/health</code>, <code>/api/admin/*</code></td></tr>
+    <tr><td><code>1-4</code></td><td>Header/method-specific routes</td><td>API versioning, read vs. write split</td></tr>
+    <tr><td><code>5-9</code></td><td>Host-specific routes</td><td>Virtual hosting by domain</td></tr>
+    <tr><td><code>10+</code></td><td>Catch-all / fallback routes</td><td><code>/{**catch-all}</code></td></tr>
+</table>
+
+<div class="try-it">
+    <h4>Try it</h4>
+    <p>Create a specific admin route (priority 0) alongside a general catch-all (priority 10):</p>
+    <pre>
+<span class="cm"># High-priority admin route</span>
+<span class="fn">curl</span> -X POST http://localhost:5002/admin/api/routes \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "routeId": "admin-panel",
+    "clusterId": "admin-backend",
+    "pathPattern": "/api/admin/{**catch-all}",
+    "priority": 0,
+    "isActive": true
+  }'</span>
+
+<span class="cm"># Low-priority catch-all</span>
+<span class="fn">curl</span> -X POST http://localhost:5002/admin/api/routes \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "routeId": "general-api",
+    "clusterId": "general-backend",
+    "pathPattern": "/api/{**catch-all}",
+    "priority": 10,
+    "isActive": true
+  }'</span>
+
+<span class="fn">curl</span> -X POST http://localhost:5000/_admin/reload
+
+<span class="cm"># Hits admin-backend (priority 0 wins)</span>
+<span class="fn">curl</span> http://localhost:5000/api/admin/dashboard
+
+<span class="cm"># Hits general-backend (no higher priority match)</span>
+<span class="fn">curl</span> http://localhost:5000/api/users
+    </pre>
+</div>
+
+<!-- Combining Criteria -->
+<h2><span class="step-num">7</span> Combining Multiple Criteria</h2>
+
+<p>A single route can combine path, host, method, and header matching. All specified criteria must match (logical AND) for the route to be selected.</p>
+
+<div class="try-it">
+    <h4>Try it</h4>
+    <p>Create a route that combines path + host + method + header:</p>
+    <pre>
+<span class="fn">curl</span> -X POST http://localhost:5002/admin/api/routes \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "routeId": "premium-write-v2",
+    "clusterId": "premium-backend",
+    "pathPattern": "/api/{**catch-all}",
+    "hosts": "premium.example.com",
+    "methods": "POST,PUT",
+    "matchHeader": "X-Version",
+    "matchHeaderValue": "v2",
+    "priority": 0,
+    "isActive": true
+  }'</span>
+
+<span class="fn">curl</span> -X POST http://localhost:5000/_admin/reload
+
+<span class="cm"># This matches all four criteria</span>
+<span class="fn">curl</span> -X POST http://localhost:5000/api/orders \
+  -H <span class="str">"Host: premium.example.com"</span> \
+  -H <span class="str">"X-Version: v2"</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"item": "gold-plan"}'</span>
+    </pre>
+</div>
+
+<!-- Managing Routes -->
+<h2><span class="step-num">8</span> Managing Routes via the API</h2>
+
+<p>Full CRUD operations are available through the Admin API at <code>/admin/api/routes</code>:</p>
+
+<div class="try-it">
+    <h4>Try it</h4>
+    <pre>
+<span class="cm"># List all routes (ordered by priority)</span>
+<span class="fn">curl</span> http://localhost:5002/admin/api/routes
+
+<span class="cm"># Update a route (change priority and path)</span>
+<span class="fn">curl</span> -X PUT http://localhost:5002/admin/api/routes/api-v1 \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "pathPattern": "/v1/api/{**catch-all}",
+    "clusterId": "backend-v1",
+    "priority": 2,
+    "isActive": true
+  }'</span>
+
+<span class="cm"># Disable a route (soft delete)</span>
+<span class="fn">curl</span> -X PUT http://localhost:5002/admin/api/routes/api-v1 \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "pathPattern": "/v1/api/{**catch-all}",
+    "clusterId": "backend-v1",
+    "isActive": false
+  }'</span>
+
+<span class="cm"># Delete a route permanently</span>
+<span class="fn">curl</span> -X DELETE http://localhost:5002/admin/api/routes/api-v1
+
+<span class="cm"># Always reload after changes!</span>
+<span class="fn">curl</span> -X POST http://localhost:5000/_admin/reload
+    </pre>
+</div>
+
+<div class="callout">
+    <strong>Remember: Always reload after changes</strong>
+    <p>The Admin API writes to the database, but the Host picks up changes only when you call <code>POST /_admin/reload</code>. This is by design: it allows you to batch multiple changes and reload once.</p>
+</div>
+
+<div class="callout success">
+    <strong>Next up: Load Balancing</strong>
+    <p>Now that you know how requests are routed to clusters, learn how SmartGateway distributes traffic across destinations within a cluster using RoundRobin, Weighted, and LatencyAware policies.</p>
+</div>
+
+</main>
+
+<footer>
+    <span>SmartGateway</span> Documentation &mdash; Built on Microsoft YARP
+</footer>
+
+</body>
+</html>

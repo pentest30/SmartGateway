@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Checks - SmartGateway Documentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0d1720;
+            --card: #13202e;
+            --accent: #00d4aa;
+            --accent-dim: #00d4aa33;
+            --text: #e8edf2;
+            --text-muted: #8899aa;
+            --border: #1e3248;
+            --code-bg: #0a1219;
+            --success: #00d4aa;
+            --warning: #f0b429;
+            --error: #ff6b6b;
+        }
+
+        body {
+            font-family: 'Syne', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            min-height: 100vh;
+        }
+
+        nav {
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(12px);
+        }
+
+        nav .nav-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            height: 64px;
+            overflow-x: auto;
+        }
+
+        nav .logo { font-weight: 800; font-size: 1.15rem; color: var(--accent); white-space: nowrap; letter-spacing: -0.5px; }
+
+        nav a {
+            color: var(--text-muted); text-decoration: none; font-size: 0.85rem; font-weight: 600;
+            white-space: nowrap; padding: 0.3rem 0.7rem; border-radius: 6px; transition: all 0.2s;
+        }
+        nav a:hover { color: var(--text); background: var(--accent-dim); }
+        nav a.active { color: var(--accent); background: var(--accent-dim); }
+
+        main { max-width: 1100px; margin: 0 auto; padding: 3rem 2rem 5rem; }
+
+        .hero { text-align: center; padding: 3rem 0 4rem; }
+
+        .hero .badge {
+            display: inline-block; background: var(--accent-dim); color: var(--accent);
+            padding: 0.35rem 1rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600;
+            margin-bottom: 1.5rem; font-family: 'JetBrains Mono', monospace;
+        }
+
+        .hero h1 { font-size: 2.8rem; font-weight: 800; line-height: 1.15; margin-bottom: 1rem; letter-spacing: -1px; }
+        .hero h1 span { color: var(--accent); }
+        .hero p { color: var(--text-muted); font-size: 1.1rem; max-width: 640px; margin: 0 auto; }
+
+        h2 {
+            font-size: 1.8rem; font-weight: 700; margin: 3rem 0 1.5rem; letter-spacing: -0.5px;
+            padding-bottom: 0.75rem; border-bottom: 2px solid var(--border);
+        }
+
+        h2 .step-num {
+            display: inline-block; background: var(--accent); color: var(--bg);
+            width: 36px; height: 36px; line-height: 36px; text-align: center;
+            border-radius: 50%; font-size: 1rem; font-weight: 800; margin-right: 0.75rem; vertical-align: middle;
+        }
+
+        h3 { font-size: 1.25rem; font-weight: 700; margin: 2rem 0 1rem; color: var(--accent); }
+        p { margin-bottom: 1rem; }
+
+        .card {
+            background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+            padding: 2rem; margin: 1.5rem 0;
+        }
+
+        .card-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.25rem; margin: 1.5rem 0;
+        }
+        .card-grid .card { margin: 0; }
+        .card h4 { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .card p { color: var(--text-muted); font-size: 0.92rem; }
+
+        pre {
+            background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px;
+            padding: 1.5rem; overflow-x: auto; margin: 1rem 0 1.5rem;
+            font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; line-height: 1.65; position: relative;
+        }
+
+        pre .label {
+            position: absolute; top: 0; right: 0; background: var(--border); color: var(--text-muted);
+            padding: 0.2rem 0.75rem; border-radius: 0 9px 0 8px; font-size: 0.7rem;
+            font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+
+        code { font-family: 'JetBrains Mono', monospace; }
+
+        p code, li code, td code {
+            background: var(--code-bg); border: 1px solid var(--border); padding: 0.15rem 0.45rem;
+            border-radius: 5px; font-size: 0.82rem;
+        }
+
+        .kw { color: #c792ea; } .str { color: #c3e88d; } .fn { color: #82aaff; }
+        .cm { color: #546e7a; } .num { color: #f78c6c; } .acc { color: #00d4aa; } .flag { color: #f0b429; }
+
+        .try-it {
+            background: linear-gradient(135deg, #0a1a14, #13202e); border: 1px solid #1a3a2a;
+            border-left: 4px solid var(--accent); border-radius: 10px; padding: 1.75rem 2rem; margin: 1.5rem 0;
+        }
+
+        .try-it h4 {
+            color: var(--accent); font-size: 0.95rem; font-weight: 700; margin-bottom: 0.75rem;
+            text-transform: uppercase; letter-spacing: 1px; font-family: 'JetBrains Mono', monospace;
+        }
+        .try-it p { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem; }
+
+        .diagram {
+            background: var(--code-bg); border: 1px solid var(--border); border-radius: 12px;
+            padding: 2rem; margin: 2rem 0; overflow-x: auto; text-align: center;
+        }
+
+        .diagram pre { background: none; border: none; padding: 0; margin: 0; display: inline-block; text-align: left; color: var(--text-muted); }
+
+        .diagram .title {
+            display: block; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem;
+            color: var(--text); margin-bottom: 1.5rem; text-align: center;
+        }
+
+        ul, ol { margin: 0.75rem 0 1.25rem 1.5rem; }
+        li { margin-bottom: 0.5rem; color: var(--text-muted); }
+        li strong { color: var(--text); }
+
+        table { width: 100%; border-collapse: collapse; margin: 1.25rem 0; font-size: 0.9rem; }
+        th, td { border: 1px solid var(--border); padding: 0.75rem 1rem; text-align: left; }
+        th { background: var(--card); font-weight: 700; color: var(--accent); }
+        td { color: var(--text-muted); }
+
+        .callout {
+            background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--warning);
+            border-radius: 8px; padding: 1.25rem 1.5rem; margin: 1.5rem 0;
+        }
+        .callout.info { border-left-color: #5bc0eb; }
+        .callout.success { border-left-color: var(--accent); }
+        .callout strong { display: block; margin-bottom: 0.35rem; font-size: 0.9rem; }
+        .callout p { font-size: 0.88rem; color: var(--text-muted); margin: 0; }
+
+        /* State machine styles */
+        .state-machine {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+        }
+
+        .state {
+            padding: 0.8rem 1.5rem;
+            border-radius: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-align: center;
+            min-width: 120px;
+        }
+
+        .state.healthy { background: #00d4aa22; color: var(--accent); border: 2px solid var(--accent); }
+        .state.unhealthy { background: #ff6b6b22; color: var(--error); border: 2px solid var(--error); }
+        .state.evicted { background: #f0b42922; color: var(--warning); border: 2px solid var(--warning); }
+
+        .state-arrow {
+            padding: 0.3rem 0.75rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            text-align: center;
+        }
+
+        footer {
+            max-width: 1100px; margin: 0 auto; padding: 3rem 2rem;
+            text-align: center; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 0.85rem;
+        }
+        footer span { color: var(--accent); font-weight: 700; }
+
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2rem; }
+            main { padding: 2rem 1rem; }
+            nav .nav-inner { gap: 0.75rem; }
+            nav a { font-size: 0.75rem; padding: 0.2rem 0.5rem; }
+            .state-machine { gap: 0.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <div class="nav-inner">
+        <span class="logo">SmartGateway</span>
+        <a href="01-getting-started.html">Getting Started</a>
+        <a href="02-routing-clusters.html">Routing</a>
+        <a href="03-load-balancing.html">Load Balancing</a>
+        <a href="04-health-checks.html" class="active">Health Checks</a>
+        <a href="05-service-registry.html">Service Registry</a>
+        <a href="06-resilience.html">Resilience</a>
+    </div>
+</nav>
+
+<main>
+
+<div class="hero">
+    <span class="badge">CHAPTER 04</span>
+    <h1><span>Health Checks</span> &amp; Probing</h1>
+    <p>SmartGateway actively probes destination health every 10 seconds, automatically evicting unhealthy servers and re-admitting them when they recover.</p>
+</div>
+
+<!-- Two Systems -->
+<h2><span class="step-num">1</span> Two Health Check Systems</h2>
+
+<p>SmartGateway uses two complementary systems to maintain cluster health:</p>
+
+<div class="card-grid">
+    <div class="card">
+        <h4>Active Health Probing</h4>
+        <p><strong>HealthProbeService</strong> is a background service that runs every 10 seconds. It sends <code>GET /health</code> to every destination. If the response is not 2xx (or the request fails), the destination is marked unhealthy and removed from the load-balancing pool.</p>
+    </div>
+    <div class="card">
+        <h4>TTL-Based Expiry</h4>
+        <p><strong>TtlExpiryService</strong> is a background service that runs every 5 seconds. For destinations with a non-zero <code>TtlSeconds</code>, it checks if the last heartbeat was too long ago. Expired destinations are marked unhealthy.</p>
+    </div>
+</div>
+
+<!-- How HealthProbeService Works -->
+<h2><span class="step-num">2</span> Active Health Probing: HealthProbeService</h2>
+
+<div class="diagram">
+    <span class="title">HealthProbeService Lifecycle (every 10 seconds)</span>
+    <pre>
+  +-------------------+
+  | <span class="acc">HealthProbeService</span> |  (BackgroundService)
+  +--------+----------+
+           |
+           |  <span class="cm">Every 10 seconds:</span>
+           v
+  +------------------------+
+  | Load ALL destinations  |
+  | from SQL Server        |
+  +--------+---------------+
+           |
+           |  <span class="cm">For each destination:</span>
+           v
+  +------------------------+
+  | Send <span class="fn">GET {address}/health</span>|
+  | Timeout: <span class="num">5 seconds</span>     |
+  +--------+---------------+
+           |
+     +-----+-----+
+     |           |
+  <span class="acc">2xx OK</span>    <span class="error">Non-2xx / Error</span>
+     |           |
+     v           v
+  +--------+  +------------+
+  |IsHealthy| |IsHealthy   |
+  |= <span class="acc">true</span>  | |= <span class="error">false</span>    |
+  +--------+  +------------+
+           |
+           v
+  +------------------------+
+  | <span class="fn">SaveChangesAsync()</span>     |
+  | Persist health status  |
+  | to SQL Server          |
+  +------------------------+
+           |
+           v
+  <span class="cm">DatabaseProxyConfigProvider only includes</span>
+  <span class="cm">destinations where IsHealthy = true</span>
+    </pre>
+</div>
+
+<h3>What Gets Probed</h3>
+<p>For each destination in the database, the probe sends:</p>
+
+<pre><span class="label">HTTP</span>
+<span class="fn">GET</span> {destination.Address}<span class="str">/health</span>
+Timeout: <span class="num">5</span> seconds
+</pre>
+
+<p>For example, if a destination has address <code>http://my-service:8080</code>, the probe hits <code>http://my-service:8080/health</code>.</p>
+
+<h3>Success and Failure Criteria</h3>
+
+<table>
+    <tr><th>Result</th><th>IsHealthy</th><th>Effect on Routing</th></tr>
+    <tr><td>HTTP 200-299 response</td><td><code>true</code></td><td>Destination stays in the load-balancing pool</td></tr>
+    <tr><td>HTTP 4xx or 5xx response</td><td><code>false</code></td><td>Destination is removed from the pool</td></tr>
+    <tr><td>Connection timeout (5s)</td><td><code>false</code></td><td>Destination is removed from the pool</td></tr>
+    <tr><td>DNS resolution failure</td><td><code>false</code></td><td>Destination is removed from the pool</td></tr>
+    <tr><td>Any exception</td><td><code>false</code></td><td>Destination is removed from the pool</td></tr>
+</table>
+
+<div class="callout info">
+    <strong>How eviction works</strong>
+    <p>The <code>DatabaseProxyConfigProvider</code> only includes destinations where <code>IsHealthy = true</code> in the YARP configuration. When it reloads, unhealthy destinations are simply absent from the cluster's destination list. YARP never sees them.</p>
+</div>
+
+<!-- Lifecycle Diagram -->
+<h2><span class="step-num">3</span> The Full Health Lifecycle</h2>
+
+<p>Here is the complete state diagram for a destination's health status:</p>
+
+<div class="state-machine">
+    <div class="state healthy">HEALTHY<br><small>In pool</small></div>
+    <div class="state-arrow">-- probe fails --&gt;</div>
+    <div class="state unhealthy">UNHEALTHY<br><small>Evicted</small></div>
+    <div class="state-arrow">-- probe succeeds --&gt;</div>
+    <div class="state healthy">HEALTHY<br><small>Re-admitted</small></div>
+</div>
+
+<div class="diagram">
+    <span class="title">Detailed Health State Timeline</span>
+    <pre>
+  Time    Probe Result    IsHealthy    In YARP Pool?
+  ----    ------------    ---------    -------------
+  t=0s    <span class="acc">200 OK</span>          true         Yes
+  t=10s   <span class="acc">200 OK</span>          true         Yes
+  t=20s   <span class="error">Connection refused</span> false     No  <span class="flag">&lt;-- EVICTED</span>
+  t=30s   <span class="error">Connection refused</span> false     No
+  t=40s   <span class="error">500 Error</span>       false        No
+  t=50s   <span class="acc">200 OK</span>          true         Yes <span class="acc">&lt;-- RE-ADMITTED</span>
+  t=60s   <span class="acc">200 OK</span>          true         Yes
+
+  <span class="cm">Note: The destination is only available for routing</span>
+  <span class="cm">when IsHealthy=true AND after a config reload.</span>
+    </pre>
+</div>
+
+<h3>Eviction Flow (Step by Step)</h3>
+<ol>
+    <li><strong>HealthProbeService</strong> sends <code>GET /health</code> to destination</li>
+    <li>Probe <strong>fails</strong> (timeout, error, non-2xx)</li>
+    <li><code>dest.IsHealthy = false</code> is saved to SQL Server</li>
+    <li>The Host logs: <code>Destination {DestId} in {ClusterId} is now UNHEALTHY</code></li>
+    <li>On next <strong>config reload</strong>, <code>DatabaseProxyConfigProvider</code> skips this destination</li>
+    <li>YARP no longer routes traffic to the unhealthy destination</li>
+</ol>
+
+<h3>Recovery Flow (Step by Step)</h3>
+<ol>
+    <li>The upstream service comes back online and responds to <code>/health</code></li>
+    <li><strong>HealthProbeService</strong> gets a <code>200 OK</code></li>
+    <li><code>dest.IsHealthy = true</code> is saved to SQL Server</li>
+    <li>The Host logs: <code>Destination {DestId} in {ClusterId} is now HEALTHY</code></li>
+    <li>On next <strong>config reload</strong>, the destination reappears in the cluster</li>
+    <li>YARP starts routing traffic to it again</li>
+</ol>
+
+<!-- Source Code -->
+<h2><span class="step-num">4</span> Under the Hood: The Probe Method</h2>
+
+<pre><span class="label">C#</span>
+<span class="kw">private async</span> Task&lt;<span class="kw">bool</span>&gt; <span class="fn">ProbeAsync</span>(HttpClient client, <span class="kw">string</span> address, CancellationToken ct)
+{
+    <span class="kw">try</span>
+    {
+        <span class="kw">var</span> uri = address.<span class="fn">TrimEnd</span>(<span class="str">'/'</span>) + <span class="str">"/health"</span>;
+        <span class="kw">var</span> response = <span class="kw">await</span> client.<span class="fn">GetAsync</span>(uri, ct);
+        <span class="kw">return</span> response.<span class="fn">IsSuccessStatusCode</span>;  <span class="cm">// true if 2xx</span>
+    }
+    <span class="kw">catch</span>
+    {
+        <span class="kw">return false</span>;  <span class="cm">// Any exception = unhealthy</span>
+    }
+}
+</pre>
+
+<p>Key implementation details:</p>
+<ul>
+    <li>Uses <code>IHttpClientFactory</code> for proper connection pooling</li>
+    <li>Probe timeout is <strong>5 seconds</strong> (set on the HttpClient)</li>
+    <li>The loop interval is <strong>10 seconds</strong> (set on the BackgroundService)</li>
+    <li>All destinations are probed sequentially within each cycle</li>
+    <li>A single failed cycle doesn't stop the service; errors are logged and the next cycle runs</li>
+</ul>
+
+<!-- TTL Expiry -->
+<h2><span class="step-num">5</span> TTL-Based Expiry: TtlExpiryService</h2>
+
+<p>For destinations registered with a non-zero <code>TtlSeconds</code>, the TtlExpiryService provides a second layer of health checking based on heartbeat freshness. See the <a href="05-service-registry.html" style="color: var(--accent);">Service Registry</a> chapter for full details on heartbeats.</p>
+
+<div class="diagram">
+    <span class="title">TTL Expiry Logic</span>
+    <pre>
+  <span class="acc">TtlExpiryService</span> (runs every <span class="num">5</span> seconds)
+           |
+           v
+  Query: SELECT * FROM Destinations
+         WHERE TtlSeconds > <span class="num">0</span>
+           AND IsHealthy = <span class="kw">true</span>
+           AND <span class="fn">DATEDIFF</span>(SECOND, LastHeartbeat, <span class="fn">GETUTCDATE</span>()) > TtlSeconds
+           |
+           v
+  For each expired destination:
+    dest.IsHealthy = <span class="error">false</span>
+    Log: <span class="flag">"Destination {DestId} in {ClusterId} expired (TTL: {Ttl}s)"</span>
+           |
+           v
+  <span class="fn">SaveChangesAsync()</span>
+    </pre>
+</div>
+
+<p>The check runs every <strong>5 seconds</strong>. A destination is evicted when:</p>
+
+<pre><span class="label">SQL (conceptual)</span>
+<span class="cm">-- Destination is expired when:</span>
+TtlSeconds > <span class="num">0</span>                             <span class="cm">-- TTL is configured</span>
+<span class="kw">AND</span> IsHealthy = <span class="kw">true</span>                     <span class="cm">-- Currently healthy</span>
+<span class="kw">AND</span> <span class="fn">DATEDIFF</span>(SECOND, LastHeartbeat, NOW()) > TtlSeconds  <span class="cm">-- Heartbeat expired</span>
+</pre>
+
+<!-- Implementing /health -->
+<h2><span class="step-num">6</span> Implementing /health in Your Service</h2>
+
+<p>For active health probing to work, your upstream services must expose a <code>GET /health</code> endpoint. Here is a minimal example:</p>
+
+<pre><span class="label">C#</span>
+<span class="cm">// In your upstream service's Program.cs or a Controller</span>
+app.<span class="fn">MapGet</span>(<span class="str">"/health"</span>, () =>
+{
+    <span class="cm">// Return 200 if the service is healthy</span>
+    <span class="cm">// Return 503 if it's not ready (e.g., DB connection down)</span>
+    <span class="kw">return</span> Results.<span class="fn">Ok</span>(<span class="kw">new</span> { status = <span class="str">"healthy"</span>, timestamp = DateTime.UtcNow });
+});
+</pre>
+
+<pre><span class="label">Node.js</span>
+<span class="cm">// Express.js example</span>
+app.<span class="fn">get</span>(<span class="str">'/health'</span>, (req, res) => {
+    res.<span class="fn">json</span>({ status: <span class="str">'healthy'</span>, timestamp: <span class="kw">new</span> <span class="fn">Date</span>().<span class="fn">toISOString</span>() });
+});
+</pre>
+
+<div class="callout">
+    <strong>Important: The endpoint must be /health</strong>
+    <p>SmartGateway appends <code>/health</code> to the destination address. If your service's address is <code>http://my-service:8080</code>, the probe will hit <code>http://my-service:8080/health</code>. Make sure this path returns a 2xx status code when the service is healthy.</p>
+</div>
+
+<!-- Observing Health -->
+<h2><span class="step-num">7</span> Observing Health Status</h2>
+
+<div class="try-it">
+    <h4>Try it</h4>
+    <p>Check the health status of all registered destinations:</p>
+    <pre>
+<span class="cm"># List all destinations with their health status</span>
+<span class="fn">curl</span> http://localhost:5002/admin/api/services | <span class="fn">python3</span> -m json.tool
+
+<span class="cm"># Response includes isHealthy for each destination:</span>
+<span class="cm"># [</span>
+<span class="cm">#   {</span>
+<span class="cm">#     "id": 1,</span>
+<span class="cm">#     "clusterId": "my-api",</span>
+<span class="cm">#     "destinationId": "server-a",</span>
+<span class="cm">#     "address": "http://server-a:8080",</span>
+<span class="cm">#     "isHealthy": true,</span>
+<span class="cm">#     "weight": 100,</span>
+<span class="cm">#     "lastHeartbeat": "2026-04-05T12:00:00Z",</span>
+<span class="cm">#     "ttlSeconds": 30</span>
+<span class="cm">#   },</span>
+<span class="cm">#   {</span>
+<span class="cm">#     "destinationId": "server-b",</span>
+<span class="cm">#     "isHealthy": false,       &lt;-- evicted!</span>
+<span class="cm">#     ...</span>
+<span class="cm">#   }</span>
+<span class="cm"># ]</span>
+    </pre>
+</div>
+
+<div class="try-it">
+    <h4>Try it</h4>
+    <p>Simulate an eviction and recovery scenario:</p>
+    <pre>
+<span class="cm"># 1. Register a destination pointing to a non-existent server</span>
+<span class="fn">curl</span> -X POST http://localhost:5002/admin/api/services/register \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "clusterId": "my-api",
+    "destinationId": "flaky-server",
+    "address": "http://localhost:9999",
+    "ttlSeconds": 0
+  }'</span>
+
+<span class="fn">curl</span> -X POST http://localhost:5000/_admin/reload
+
+<span class="cm"># 2. Wait 10-20 seconds for the health probe to run</span>
+<span class="cm">#    The probe will fail (nothing listening on port 9999)</span>
+
+<span class="cm"># 3. Check health status - should be unhealthy</span>
+<span class="fn">curl</span> http://localhost:5002/admin/api/services | <span class="fn">python3</span> -m json.tool
+
+<span class="cm"># 4. The destination is now evicted from the YARP pool</span>
+<span class="cm">#    Traffic only goes to healthy destinations</span>
+    </pre>
+</div>
+
+<!-- Summary Diagram -->
+<h2><span class="step-num">8</span> Health Check Architecture Summary</h2>
+
+<div class="diagram">
+    <span class="title">Complete Health Check Architecture</span>
+    <pre>
+  +-------------------+       +-------------------+
+  | <span class="acc">HealthProbeService</span> |       | <span class="acc">TtlExpiryService</span>  |
+  | (every <span class="num">10s</span>)       |       | (every <span class="num">5s</span>)        |
+  +--------+----------+       +--------+----------+
+           |                           |
+           |  GET /health              |  Check LastHeartbeat
+           |  to each destination      |  vs TtlSeconds
+           |                           |
+           +----------+  +------------+
+                      |  |
+                      v  v
+              +------------------+
+              |   <span class="kw">SQL Server</span>      |
+              | GatewayDestination|
+              |  .IsHealthy      |
+              +--------+---------+
+                       |
+                       v
+          +------------------------+
+          | <span class="fn">DatabaseProxyConfig</span>    |
+          | <span class="fn">Provider</span>               |
+          | Only loads destinations|
+          | where IsHealthy=<span class="acc">true</span>  |
+          +------------------------+
+                       |
+                       v
+              +------------------+
+              | <span class="kw">YARP Proxy</span>       |
+              | Routes traffic   |
+              | only to healthy  |
+              | destinations     |
+              +------------------+
+    </pre>
+</div>
+
+<div class="callout success">
+    <strong>Next up: Service Registry</strong>
+    <p>Health checks work alongside the service registry. Learn how services self-register, send heartbeats, and how TTL expiry ties into the health system.</p>
+</div>
+
+</main>
+
+<footer>
+    <span>SmartGateway</span> Documentation &mdash; Built on Microsoft YARP
+</footer>
+
+</body>
+</html>

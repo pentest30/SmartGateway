@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Load Balancing - SmartGateway Documentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0d1720;
+            --card: #13202e;
+            --accent: #00d4aa;
+            --accent-dim: #00d4aa33;
+            --text: #e8edf2;
+            --text-muted: #8899aa;
+            --border: #1e3248;
+            --code-bg: #0a1219;
+            --success: #00d4aa;
+            --warning: #f0b429;
+            --error: #ff6b6b;
+        }
+
+        body {
+            font-family: 'Syne', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            min-height: 100vh;
+        }
+
+        nav {
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(12px);
+        }
+
+        nav .nav-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            height: 64px;
+            overflow-x: auto;
+        }
+
+        nav .logo {
+            font-weight: 800;
+            font-size: 1.15rem;
+            color: var(--accent);
+            white-space: nowrap;
+            letter-spacing: -0.5px;
+        }
+
+        nav a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            white-space: nowrap;
+            padding: 0.3rem 0.7rem;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        nav a:hover { color: var(--text); background: var(--accent-dim); }
+        nav a.active { color: var(--accent); background: var(--accent-dim); }
+
+        main {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 3rem 2rem 5rem;
+        }
+
+        .hero {
+            text-align: center;
+            padding: 3rem 0 4rem;
+        }
+
+        .hero .badge {
+            display: inline-block;
+            background: var(--accent-dim);
+            color: var(--accent);
+            padding: 0.35rem 1rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .hero h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            line-height: 1.15;
+            margin-bottom: 1rem;
+            letter-spacing: -1px;
+        }
+
+        .hero h1 span { color: var(--accent); }
+        .hero p { color: var(--text-muted); font-size: 1.1rem; max-width: 640px; margin: 0 auto; }
+
+        h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 3rem 0 1.5rem;
+            letter-spacing: -0.5px;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        h2 .step-num {
+            display: inline-block;
+            background: var(--accent);
+            color: var(--bg);
+            width: 36px;
+            height: 36px;
+            line-height: 36px;
+            text-align: center;
+            border-radius: 50%;
+            font-size: 1rem;
+            font-weight: 800;
+            margin-right: 0.75rem;
+            vertical-align: middle;
+        }
+
+        h3 { font-size: 1.25rem; font-weight: 700; margin: 2rem 0 1rem; color: var(--accent); }
+        p { margin-bottom: 1rem; }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 1.5rem 0;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.25rem;
+            margin: 1.5rem 0;
+        }
+
+        .card-grid .card { margin: 0; }
+        .card h4 { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .card p { color: var(--text-muted); font-size: 0.92rem; }
+
+        .card .policy-name {
+            display: inline-block;
+            background: var(--accent-dim);
+            color: var(--accent);
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        pre {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 1rem 0 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.65;
+            position: relative;
+        }
+
+        pre .label {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--border);
+            color: var(--text-muted);
+            padding: 0.2rem 0.75rem;
+            border-radius: 0 9px 0 8px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        code { font-family: 'JetBrains Mono', monospace; }
+
+        p code, li code, td code {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            padding: 0.15rem 0.45rem;
+            border-radius: 5px;
+            font-size: 0.82rem;
+        }
+
+        .kw { color: #c792ea; }
+        .str { color: #c3e88d; }
+        .fn { color: #82aaff; }
+        .cm { color: #546e7a; }
+        .num { color: #f78c6c; }
+        .acc { color: #00d4aa; }
+        .flag { color: #f0b429; }
+
+        .try-it {
+            background: linear-gradient(135deg, #0a1a14, #13202e);
+            border: 1px solid #1a3a2a;
+            border-left: 4px solid var(--accent);
+            border-radius: 10px;
+            padding: 1.75rem 2rem;
+            margin: 1.5rem 0;
+        }
+
+        .try-it h4 {
+            color: var(--accent);
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .try-it p { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem; }
+
+        .diagram {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 2rem 0;
+            overflow-x: auto;
+            text-align: center;
+        }
+
+        .diagram pre {
+            background: none;
+            border: none;
+            padding: 0;
+            margin: 0;
+            display: inline-block;
+            text-align: left;
+            color: var(--text-muted);
+        }
+
+        .diagram .title {
+            display: block;
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--text);
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        ul, ol { margin: 0.75rem 0 1.25rem 1.5rem; }
+        li { margin-bottom: 0.5rem; color: var(--text-muted); }
+        li strong { color: var(--text); }
+
+        table { width: 100%; border-collapse: collapse; margin: 1.25rem 0; font-size: 0.9rem; }
+        th, td { border: 1px solid var(--border); padding: 0.75rem 1rem; text-align: left; }
+        th { background: var(--card); font-weight: 700; color: var(--accent); }
+        td { color: var(--text-muted); }
+
+        .callout {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--warning);
+            border-radius: 8px;
+            padding: 1.25rem 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .callout.info { border-left-color: #5bc0eb; }
+        .callout.success { border-left-color: var(--accent); }
+
+        .callout strong { display: block; margin-bottom: 0.35rem; font-size: 0.9rem; }
+        .callout p { font-size: 0.88rem; color: var(--text-muted); margin: 0; }
+
+        /* Traffic bar visualization */
+        .traffic-bar {
+            display: flex;
+            height: 32px;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 1rem 0;
+            border: 1px solid var(--border);
+        }
+
+        .traffic-bar .segment {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--bg);
+        }
+
+        footer {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+            text-align: center;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        footer span { color: var(--accent); font-weight: 700; }
+
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2rem; }
+            main { padding: 2rem 1rem; }
+            nav .nav-inner { gap: 0.75rem; }
+            nav a { font-size: 0.75rem; padding: 0.2rem 0.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <div class="nav-inner">
+        <span class="logo">SmartGateway</span>
+        <a href="01-getting-started.html">Getting Started</a>
+        <a href="02-routing-clusters.html">Routing</a>
+        <a href="03-load-balancing.html" class="active">Load Balancing</a>
+        <a href="04-health-checks.html">Health Checks</a>
+        <a href="05-service-registry.html">Service Registry</a>
+        <a href="06-resilience.html">Resilience</a>
+    </div>
+</nav>
+
+<main>
+
+<div class="hero">
+    <span class="badge">CHAPTER 03</span>
+    <h1><span>Load Balancing</span> Policies</h1>
+    <p>SmartGateway provides three load-balancing strategies: YARP's built-in RoundRobin, a custom Weighted policy, and a custom LatencyAware policy that uses p95 latency tracking.</p>
+</div>
+
+<!-- Overview -->
+<h2><span class="step-num">1</span> Three Policies at a Glance</h2>
+
+<div class="card-grid">
+    <div class="card">
+        <span class="policy-name">RoundRobin</span>
+        <h4>Equal Distribution</h4>
+        <p>YARP's built-in policy. Cycles through all healthy destinations in order, giving each an equal share of traffic. Simple and effective when all servers have similar capacity.</p>
+    </div>
+    <div class="card">
+        <span class="policy-name">Weighted</span>
+        <h4>Proportional Distribution</h4>
+        <p>Custom SmartGateway policy. Each destination has a configurable weight (0-1000). Traffic is distributed proportionally. Higher weight = more traffic. Stored in the database.</p>
+    </div>
+    <div class="card">
+        <span class="policy-name">LatencyAware</span>
+        <h4>Performance-Based Distribution</h4>
+        <p>Custom SmartGateway policy. Tracks the p95 response latency for each destination using a circular buffer of 100 samples. Faster servers automatically get more traffic.</p>
+    </div>
+</div>
+
+<p>The load-balancing policy is set on the <strong>cluster</strong> level. Each cluster independently chooses its policy.</p>
+
+<!-- RoundRobin -->
+<h2><span class="step-num">2</span> RoundRobin (Built-in)</h2>
+
+<div class="diagram">
+    <span class="title">RoundRobin Traffic Distribution</span>
+    <pre>
+  Requests:  1   2   3   4   5   6   7   8   9   ...
+
+  Dest A:    <span class="acc">*</span>           <span class="acc">*</span>           <span class="acc">*</span>
+  Dest B:        <span class="acc">*</span>           <span class="acc">*</span>           <span class="acc">*</span>
+  Dest C:            <span class="acc">*</span>           <span class="acc">*</span>           <span class="acc">*</span>
+
+  Each destination gets exactly 33.3% of traffic.
+    </pre>
+</div>
+
+<p>RoundRobin is YARP's default policy. It cycles through available destinations in order. No configuration beyond the policy name is needed.</p>
+
+<h3>Algorithm</h3>
+<ol>
+    <li>YARP maintains an internal counter per cluster</li>
+    <li>For each request, it picks <code>destinations[counter % count]</code></li>
+    <li>Increments the counter atomically</li>
+    <li>Only healthy destinations are in the pool</li>
+</ol>
+
+<div class="try-it">
+    <h4>Try it</h4>
+    <p>Create a cluster with RoundRobin and three destinations:</p>
+    <pre>
+<span class="cm"># Create the cluster</span>
+<span class="fn">curl</span> -X POST http://localhost:5002/admin/api/clusters \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"clusterId": "round-robin-demo", "loadBalancing": "RoundRobin"}'</span>
+
+<span class="cm"># Register three destinations</span>
+<span class="fn">curl</span> -X POST http://localhost:5002/admin/api/services/register \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"clusterId":"round-robin-demo","destinationId":"server-a","address":"http://server-a:8080","ttlSeconds":0}'</span>
+
+<span class="fn">curl</span> -X POST http://localhost:5002/admin/api/services/register \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"clusterId":"round-robin-demo","destinationId":"server-b","address":"http://server-b:8080","ttlSeconds":0}'</span>
+
+<span class="fn">curl</span> -X POST http://localhost:5002/admin/api/services/register \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"clusterId":"round-robin-demo","destinationId":"server-c","address":"http://server-c:8080","ttlSeconds":0}'</span>
+
+<span class="fn">curl</span> -X POST http://localhost:5000/_admin/reload
+    </pre>
+</div>
+
+<p><strong>Traffic distribution with 3 destinations:</strong></p>
+<div class="traffic-bar">
+    <div class="segment" style="width: 33.3%; background: #00d4aa;">A: 33%</div>
+    <div class="segment" style="width: 33.3%; background: #5bc0eb;">B: 33%</div>
+    <div class="segment" style="width: 33.4%; background: #c792ea;">C: 34%</div>
+</div>
+
+<!-- Weighted -->
+<h2><span class="step-num">3</span> Weighted (Custom)</h2>
+
+<div class="diagram">
+    <span class="title">Weighted Traffic Distribution</span>
+    <pre>
+  Weights:  A=<span class="num">300</span>   B=<span class="num">100</span>   C=<span class="num">100</span>
+  Total: <span class="num">500</span>
+
+  Out of 10 requests, approximately:
+  Dest A (<span class="num">60%</span>):  <span class="acc">*</span> <span class="acc">*</span> <span class="acc">*</span> <span class="acc">*</span> <span class="acc">*</span> <span class="acc">*</span>
+  Dest B (<span class="num">20%</span>):  <span class="fn">*</span> <span class="fn">*</span>
+  Dest C (<span class="num">20%</span>):  <span class="kw">*</span> <span class="kw">*</span>
+    </pre>
+</div>
+
+<p>The <code>WeightedLoadBalancingPolicy</code> is a custom SmartGateway policy that reads destination weights from the database via <code>DatabaseDestinationWeightProvider</code>.</p>
+
+<h3>Algorithm</h3>
+<pre><span class="label">C# (simplified)</span>
+<span class="cm">// 1. Build cumulative weight array</span>
+<span class="kw">int</span> totalWeight = <span class="num">0</span>;
+<span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">0</span>; i < destinations.Count; i++)
+{
+    <span class="kw">var</span> weight = weightProvider.<span class="fn">GetWeight</span>(clusterId, destId);
+    totalWeight += Math.<span class="fn">Max</span>(<span class="num">0</span>, weight);
+    cumulativeWeights[i] = totalWeight;
+}
+
+<span class="cm">// 2. Pick random number in [0, totalWeight)</span>
+<span class="kw">var</span> target = Random.<span class="fn">Next</span>(totalWeight);
+
+<span class="cm">// 3. Find the destination whose cumulative range contains target</span>
+<span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">0</span>; i < cumulativeWeights.Length; i++)
+{
+    <span class="kw">if</span> (target < cumulativeWeights[i])
+        <span class="kw">return</span> destinations[i];
+}
+</pre>
+
+<p>Each destination's <code>Weight</code> field (stored in <code>GatewayDestination</code>) controls its share. The default weight is <code>100</code>.</p>
+
+<table>
+    <tr><th>Destination</th><th>Weight</th><th>Share</th></tr>
+    <tr><td>server-a</td><td><code>300</code></td><td>300/500 = 60%</td></tr>
+    <tr><td>server-b</td><td><code>100</code></td><td>100/500 = 20%</td></tr>
+    <tr><td>server-c</td><td><code>100</code></td><td>100/500 = 20%</td></tr>
+</table>
+
+<p><strong>Visual traffic split:</strong></p>
+<div class="traffic-bar">
+    <div class="segment" style="width: 60%; background: #00d4aa;">A: 60%</div>
+    <div class="segment" style="width: 20%; background: #5bc0eb;">B: 20%</div>
+    <div class="segment" style="width: 20%; background: #c792ea;">C: 20%</div>
+</div>
+
+<div class="try-it">
+    <h4>Try it</h4>
+    <p>Create a weighted cluster and register destinations with different weights:</p>
+    <pre>
+<span class="cm"># Create cluster with Weighted policy</span>
+<span class="fn">curl</span> -X POST http://localhost:5002/admin/api/clusters \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"clusterId": "weighted-demo", "loadBalancing": "Weighted"}'</span>
+
+<span class="cm"># Primary server (high weight = 300)</span>
+<span class="fn">curl</span> -X POST http://localhost:5002/admin/api/services/register \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"clusterId":"weighted-demo","destinationId":"primary","address":"http://primary:8080","ttlSeconds":0}'</span>
+
+<span class="cm"># Secondary servers (default weight = 100 each)</span>
+<span class="fn">curl</span> -X POST http://localhost:5002/admin/api/services/register \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"clusterId":"weighted-demo","destinationId":"secondary-1","address":"http://secondary-1:8080","ttlSeconds":0}'</span>
+
+<span class="fn">curl</span> -X POST http://localhost:5002/admin/api/services/register \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"clusterId":"weighted-demo","destinationId":"secondary-2","address":"http://secondary-2:8080","ttlSeconds":0}'</span>
+
+<span class="fn">curl</span> -X POST http://localhost:5000/_admin/reload
+    </pre>
+</div>
+
+<div class="callout info">
+    <strong>How weights are stored</strong>
+    <p>Each <code>GatewayDestination</code> entity has a <code>Weight</code> property (int, default 100). The <code>DatabaseDestinationWeightProvider</code> reads this value at routing time. To change a destination's weight, update it via the database or API and reload.</p>
+</div>
+
+<!-- LatencyAware -->
+<h2><span class="step-num">4</span> LatencyAware (Custom)</h2>
+
+<div class="diagram">
+    <span class="title">LatencyAware: Inverse-Latency Weighted Selection</span>
+    <pre>
+  <span class="acc">LatencyTracker</span>
+  +-----------------------------------------+
+  |  Circular Buffer (size: <span class="num">100</span>)            |
+  |                                         |
+  |  server-a: [<span class="num">12ms</span>,<span class="num">14ms</span>,<span class="num">11ms</span>,<span class="num">15ms</span>,...] p95 = <span class="num">18ms</span>  |
+  |  server-b: [<span class="num">45ms</span>,<span class="num">52ms</span>,<span class="num">48ms</span>,<span class="num">41ms</span>,...] p95 = <span class="num">55ms</span>  |
+  |  server-c: [<span class="num">25ms</span>,<span class="num">28ms</span>,<span class="num">24ms</span>,<span class="num">30ms</span>,...] p95 = <span class="num">32ms</span>  |
+  +-----------------------------------------+
+         |
+         v
+  <span class="kw">Inverse-latency weights:</span>
+  server-a: 1/(18+1)  = <span class="num">0.0526</span>  --> <span class="acc">50%</span> of traffic
+  server-b: 1/(55+1)  = <span class="num">0.0179</span>  --> <span class="flag">17%</span> of traffic
+  server-c: 1/(32+1)  = <span class="num">0.0303</span>  --> <span class="fn">30%</span> of traffic
+    </pre>
+</div>
+
+<p>The <code>LatencyAwareLoadBalancingPolicy</code> automatically routes more traffic to faster servers. It measures actual response latency using a thread-safe circular buffer of 100 samples per destination.</p>
+
+<h3>Algorithm</h3>
+<pre><span class="label">C# (simplified)</span>
+<span class="cm">// 1. Get p95 latency for each destination from LatencyTracker</span>
+<span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">0</span>; i < destinations.Count; i++)
+{
+    <span class="kw">var</span> p95 = tracker.<span class="fn">GetP95</span>(clusterId, destId);
+    latencies[i] = (dest, p95.TotalMilliseconds);
+}
+
+<span class="cm">// 2. If no latency data yet, pick randomly</span>
+<span class="kw">if</span> (!hasData) <span class="kw">return</span> destinations[Random.<span class="fn">Next</span>(count)];
+
+<span class="cm">// 3. Compute inverse-latency weights: 1/(p95 + 1)</span>
+<span class="cm">//    Lower latency = higher weight = more traffic</span>
+<span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">0</span>; i < latencies.Length; i++)
+{
+    weights[i] = <span class="num">1.0</span> / (latencies[i].p95Ms + <span class="num">1</span>);
+    totalWeight += weights[i];
+}
+
+<span class="cm">// 4. Weighted random selection</span>
+<span class="kw">var</span> target = Random.<span class="fn">NextDouble</span>() * totalWeight;
+</pre>
+
+<h3>The Circular Buffer</h3>
+<p>The <code>LatencyTracker</code> uses a fixed-size circular buffer (default: 100 entries) per destination. This means:</p>
+<ul>
+    <li><strong>Memory-efficient</strong>: Only the last 100 latency samples are kept</li>
+    <li><strong>Responsive</strong>: If a server slows down, the p95 rises quickly as new slow samples replace fast ones</li>
+    <li><strong>Thread-safe</strong>: Protected by a lock per buffer instance</li>
+</ul>
+
+<div class="diagram">
+    <span class="title">Circular Buffer for server-a (size 100)</span>
+    <pre>
+  Index: [0] [1] [2] [3] [4] ... [97] [98] [99]
+  Data:  <span class="num">12</span>  <span class="num">14</span>  <span class="num">11</span>  <span class="num">15</span>  <span class="num">13</span>  ...  <span class="num">16</span>   <span class="num">14</span>   <span class="num">18</span>   (ms)
+                                            ^
+                                          head
+  New sample arrives (9ms):
+  Index: [0] [1] [2] [3] [4] ... [97] [98] [99]
+  Data:  <span class="acc">9</span>   <span class="num">14</span>  <span class="num">11</span>  <span class="num">15</span>  <span class="num">13</span>  ...  <span class="num">16</span>   <span class="num">14</span>   <span class="num">18</span>   (ms)
+          ^
+        head (wraps around)
+
+  p95 = <span class="fn">Sort all samples, take value at index ceil(0.95 * count) - 1</span>
+    </pre>
+</div>
+
+<p><strong>Traffic distribution adapts to latency:</strong></p>
+<div class="traffic-bar">
+    <div class="segment" style="width: 50%; background: #00d4aa;">A (18ms p95): 50%</div>
+    <div class="segment" style="width: 30%; background: #5bc0eb;">C (32ms p95): 30%</div>
+    <div class="segment" style="width: 20%; background: #c792ea;">B (55ms p95): 20%</div>
+</div>
+
+<div class="try-it">
+    <h4>Try it</h4>
+    <p>Create a cluster with the LatencyAware policy:</p>
+    <pre>
+<span class="cm"># Create cluster with LatencyAware policy</span>
+<span class="fn">curl</span> -X POST http://localhost:5002/admin/api/clusters \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"clusterId": "latency-demo", "loadBalancing": "LatencyAware"}'</span>
+
+<span class="cm"># Register destinations</span>
+<span class="fn">curl</span> -X POST http://localhost:5002/admin/api/services/register \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"clusterId":"latency-demo","destinationId":"fast-server","address":"http://fast:8080","ttlSeconds":0}'</span>
+
+<span class="fn">curl</span> -X POST http://localhost:5002/admin/api/services/register \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"clusterId":"latency-demo","destinationId":"slow-server","address":"http://slow:8080","ttlSeconds":0}'</span>
+
+<span class="fn">curl</span> -X POST http://localhost:5000/_admin/reload
+
+<span class="cm"># Initially, traffic is random (no latency data)</span>
+<span class="cm"># After ~100 requests, distribution adapts to actual latency</span>
+    </pre>
+</div>
+
+<div class="callout">
+    <strong>Cold start behavior</strong>
+    <p>When a destination has no latency data (cold start), the LatencyAware policy falls back to random selection. After enough requests fill the circular buffer, it switches to inverse-latency weighting. Destinations with no data get the average latency weight of those that do.</p>
+</div>
+
+<!-- Switching Policies -->
+<h2><span class="step-num">5</span> Switching a Cluster's Policy</h2>
+
+<p>You can change a cluster's load-balancing policy at any time through the Admin API:</p>
+
+<div class="try-it">
+    <h4>Try it</h4>
+    <pre>
+<span class="cm"># Switch from RoundRobin to Weighted</span>
+<span class="fn">curl</span> -X PUT http://localhost:5002/admin/api/clusters/my-api \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"loadBalancing": "Weighted", "isActive": true}'</span>
+
+<span class="cm"># Switch to LatencyAware</span>
+<span class="fn">curl</span> -X PUT http://localhost:5002/admin/api/clusters/my-api \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"loadBalancing": "LatencyAware", "isActive": true}'</span>
+
+<span class="cm"># Always reload after changes</span>
+<span class="fn">curl</span> -X POST http://localhost:5000/_admin/reload
+    </pre>
+</div>
+
+<!-- Comparison -->
+<h2><span class="step-num">6</span> Choosing the Right Policy</h2>
+
+<table>
+    <tr><th>Scenario</th><th>Recommended Policy</th><th>Why</th></tr>
+    <tr>
+        <td>All servers have identical hardware</td>
+        <td><code>RoundRobin</code></td>
+        <td>Equal distribution is optimal when capacity is uniform</td>
+    </tr>
+    <tr>
+        <td>Canary deployment (90/10 split)</td>
+        <td><code>Weighted</code></td>
+        <td>Set stable=900, canary=100 for a 90/10 traffic split</td>
+    </tr>
+    <tr>
+        <td>Mixed hardware (some fast, some slow)</td>
+        <td><code>LatencyAware</code></td>
+        <td>Automatically adapts to actual response performance</td>
+    </tr>
+    <tr>
+        <td>Blue/green deployment</td>
+        <td><code>Weighted</code></td>
+        <td>Set blue=0, green=100 to shift all traffic to green</td>
+    </tr>
+    <tr>
+        <td>Microservices with variable load</td>
+        <td><code>LatencyAware</code></td>
+        <td>Handles transient slowdowns by shifting traffic away</td>
+    </tr>
+</table>
+
+<div class="callout success">
+    <strong>Next up: Health Checks</strong>
+    <p>Load balancing only works well when unhealthy destinations are removed from the pool. Learn how SmartGateway's active health probing and TTL expiry keep your clusters healthy.</p>
+</div>
+
+</main>
+
+<footer>
+    <span>SmartGateway</span> Documentation &mdash; Built on Microsoft YARP
+</footer>
+
+</body>
+</html>

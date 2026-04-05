@@ -1,0 +1,104 @@
+@page "/health"
+@using Microsoft.EntityFrameworkCore
+@using SmartGateway.Core.Data
+@using SmartGateway.Core.Entities
+@inject IDbContextFactory<SmartGatewayDbContext> DbFactory
+@rendermode InteractiveServer
+
+<PageTitle>Health - SmartGateway</PageTitle>
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Health Monitor</div>
+        <div class="page-sub">Active and passive health check status</div>
+    </div>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">Total destinations</div>
+        <div class="stat-val">@_total</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Healthy</div>
+        <div class="stat-val" style="color:var(--success)">@_healthy</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Evicted</div>
+        <div class="stat-val" style="color:@(_evicted > 0 ? "var(--danger)" : "var(--text)")">@_evicted</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Health rate</div>
+        <div class="stat-val">@(_total > 0 ? $"{(double)_healthy/_total*100:F0}" : "--")<span class="stat-unit">%</span></div>
+    </div>
+</div>
+
+<div class="section-full">
+    <div class="section-head"><div class="card-title">Destination health grid</div></div>
+    @if (_destinations == null)
+    {
+        <div style="padding:24px;color:var(--text3)">Loading...</div>
+    }
+    else if (_destinations.Count == 0)
+    {
+        <div class="empty-state">
+            <div class="empty-title">No destinations</div>
+            <div class="empty-desc">Register destinations to monitor their health.</div>
+        </div>
+    }
+    else
+    {
+        <div class="health-grid">
+            @foreach (var dest in _destinations)
+            {
+                <div class="health-node" style="@(!dest.IsHealthy ? "border-color:rgba(255,71,87,0.3)" : "")">
+                    <div class="health-name">@dest.ClusterId / @dest.DestinationId</div>
+                    <div class="health-addr">@dest.Address</div>
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                        @if (dest.IsHealthy)
+                        {
+                            <span class="badge badge-green"><span class="badge-dot"></span>healthy</span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-red"><span class="badge-dot"></span>evicted</span>
+                        }
+                        <span style="font-family:var(--mono);font-size:10px;color:var(--text3)">
+                            w:@dest.Weight
+                        </span>
+                    </div>
+                    @if (!dest.IsHealthy)
+                    {
+                        <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;gap:6px">
+                            <button class="btn btn-primary btn-sm" @onclick="() => ReAdmit(dest.Id)">Re-admit</button>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<GatewayDestination>? _destinations;
+    private int _total, _healthy, _evicted;
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        using var context = await DbFactory.CreateDbContextAsync();
+        _destinations = await context.Destinations.AsNoTracking().OrderBy(d => d.ClusterId).ThenBy(d => d.DestinationId).ToListAsync();
+        _total = _destinations.Count;
+        _healthy = _destinations.Count(d => d.IsHealthy);
+        _evicted = _total - _healthy;
+    }
+
+    private async Task ReAdmit(int id)
+    {
+        using var context = await DbFactory.CreateDbContextAsync();
+        var d = await context.Destinations.FindAsync(id);
+        if (d != null) { d.IsHealthy = true; await context.SaveChangesAsync(); }
+        await Load();
+    }
+}

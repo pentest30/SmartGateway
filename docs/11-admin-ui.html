@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin UI - SmartGateway Documentation</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0d1720;--surface:#13202e;--surface2:#182a3a;--border:#1e3348;
+    --accent:#00d4aa;--accent2:#6c5ce7;--text:#e8edf2;--text2:#a4b3c4;--text3:#5e7a94;
+    --success:#00d4aa;--danger:#ff4757;--warn:#ffa502;
+    --font:'Syne',sans-serif;--mono:'JetBrains Mono',monospace;
+    --radius:10px;--radius-sm:6px;
+  }
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--text);font-family:var(--font);line-height:1.7;font-size:15px}
+  a{color:var(--accent);text-decoration:none;transition:opacity .2s}
+  a:hover{opacity:.8}
+
+  .navbar{position:sticky;top:0;z-index:100;background:rgba(13,23,32,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0 32px}
+  .nav-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;height:56px;gap:24px;overflow-x:auto}
+  .nav-brand{font-weight:800;font-size:17px;color:var(--accent);white-space:nowrap;letter-spacing:-.3px}
+  .nav-links{display:flex;gap:6px;flex:1;overflow-x:auto;scrollbar-width:none}
+  .nav-links::-webkit-scrollbar{display:none}
+  .nav-link{font-size:12.5px;padding:6px 11px;border-radius:var(--radius-sm);color:var(--text2);white-space:nowrap;transition:all .2s;font-weight:500}
+  .nav-link:hover{background:var(--surface);color:var(--text)}
+  .nav-link.active{background:rgba(0,212,170,.1);color:var(--accent)}
+
+  .container{max-width:920px;margin:0 auto;padding:48px 32px 80px}
+
+  .hero{margin-bottom:56px}
+  .hero-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin-bottom:10px}
+  .hero h1{font-size:40px;font-weight:800;line-height:1.15;letter-spacing:-.5px;margin-bottom:14px}
+  .hero p{font-size:17px;color:var(--text2);max-width:640px;line-height:1.7}
+
+  section{margin-bottom:56px}
+  h2{font-size:26px;font-weight:700;margin-bottom:18px;letter-spacing:-.3px;padding-top:8px;border-top:1px solid var(--border)}
+  h3{font-size:19px;font-weight:600;margin-bottom:12px;color:var(--text)}
+  h4{font-size:16px;font-weight:600;margin-bottom:10px;color:var(--accent)}
+  p,li{color:var(--text2);line-height:1.8}
+  p{margin-bottom:14px}
+  ul,ol{margin-left:20px;margin-bottom:16px}
+  li{margin-bottom:6px}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px}
+  .card-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px}
+
+  pre{background:#0a1018;border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;overflow-x:auto;margin-bottom:20px;line-height:1.65}
+  code{font-family:var(--mono);font-size:13px}
+  pre code{color:#c8d6e5}
+  :not(pre)>code{background:var(--surface2);padding:2px 7px;border-radius:4px;font-size:13px;color:var(--accent)}
+
+  .info-box{border-left:3px solid var(--accent);background:rgba(0,212,170,.06);padding:16px 20px;border-radius:0 var(--radius) var(--radius) 0;margin-bottom:20px}
+  .info-box.warn{border-left-color:var(--warn);background:rgba(255,165,2,.06)}
+  .info-box strong{color:var(--text);font-weight:600}
+
+  table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:14px}
+  th{text-align:left;font-weight:600;color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:1px;padding:10px 14px;border-bottom:1px solid var(--border)}
+  td{padding:12px 14px;border-bottom:1px solid var(--border);color:var(--text2)}
+  tr:hover td{background:rgba(0,212,170,.03)}
+
+  .badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px}
+  .badge-green{background:rgba(0,212,170,.12);color:var(--success)}
+  .badge-red{background:rgba(255,71,87,.12);color:var(--danger)}
+  .badge-purple{background:rgba(108,92,231,.12);color:var(--accent2)}
+  .badge-gray{background:rgba(94,122,148,.12);color:var(--text3)}
+  .badge-warn{background:rgba(255,165,2,.12);color:var(--warn)}
+
+  /* ── Page directory grid ── */
+  .pages-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px}
+  .page-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden;transition:all .2s}
+  .page-card:hover{border-color:rgba(0,212,170,.3);transform:translateY(-2px)}
+  .page-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+  .page-card:nth-child(1)::before{background:var(--accent)}
+  .page-card:nth-child(2)::before{background:var(--accent2)}
+  .page-card:nth-child(3)::before{background:var(--warn)}
+  .page-card:nth-child(4)::before{background:#e056a0}
+  .page-card:nth-child(5)::before{background:#3498db}
+  .page-card:nth-child(6)::before{background:var(--success)}
+  .page-card:nth-child(7)::before{background:var(--danger)}
+  .page-card:nth-child(8)::before{background:#f39c12}
+  .page-card:nth-child(9)::before{background:#9b59b6}
+  .page-card:nth-child(10)::before{background:#1abc9c}
+  .page-card:nth-child(11)::before{background:#e74c3c}
+  .page-num{font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:4px}
+  .page-name{font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px}
+  .page-route{font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:6px}
+  .page-desc{font-size:12px;color:var(--text3);line-height:1.5}
+
+  /* ── Mock UI elements ── */
+  .mock-ui{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:20px}
+  .mock-header{background:var(--surface);padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+  .mock-title{font-weight:700;font-size:14px;color:var(--text)}
+  .mock-sub{font-size:11px;color:var(--text3)}
+  .mock-btn{background:var(--accent);color:var(--bg);border:none;padding:6px 14px;border-radius:var(--radius-sm);font-size:11px;font-weight:600;margin-left:auto;cursor:default}
+  .mock-body{padding:16px}
+  .mock-stat{display:inline-block;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 16px;margin:4px;min-width:120px;text-align:center}
+  .mock-stat-val{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--text)}
+  .mock-stat-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+  .mock-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+  .mock-row:last-child{border-bottom:none}
+  .mock-dot{width:8px;height:8px;border-radius:50%}
+
+  /* ── Modal mock ── */
+  .mock-modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;max-width:420px;margin:0 auto 20px}
+  .mock-modal-title{font-size:17px;font-weight:700;color:var(--text);margin-bottom:16px}
+  .mock-field{margin-bottom:12px}
+  .mock-field-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+  .mock-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;color:var(--text3);font-family:var(--mono);font-size:12px}
+  .mock-select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;color:var(--text3);font-family:var(--mono);font-size:12px}
+  .mock-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+  .mock-btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text2);padding:6px 14px;border-radius:var(--radius-sm);font-size:11px;font-weight:600;cursor:default}
+
+  /* ── Design system cards ── */
+  .design-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:24px}
+  .design-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+  .color-swatch{display:inline-block;width:20px;height:20px;border-radius:4px;vertical-align:middle;margin-right:8px;border:1px solid rgba(255,255,255,.1)}
+
+  @media(max-width:900px){.pages-grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:600px){.pages-grid{grid-template-columns:1fr}.design-grid{grid-template-columns:1fr}}
+
+  footer{border-top:1px solid var(--border);padding:32px;text-align:center;color:var(--text3);font-size:13px}
+  .kw{color:#c678dd} .str{color:#98c379} .cm{color:#5c6370;font-style:italic} .fn{color:#61afef} .num{color:#d19a66} .op{color:#56b6c2}
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-inner">
+    <div class="nav-brand">SmartGateway</div>
+    <div class="nav-links">
+      <a href="01-getting-started.html" class="nav-link">01 Getting Started</a>
+      <a href="02-architecture.html" class="nav-link">02 Architecture</a>
+      <a href="03-clusters.html" class="nav-link">03 Clusters</a>
+      <a href="04-routes.html" class="nav-link">04 Routes</a>
+      <a href="05-health-checks.html" class="nav-link">05 Health Checks</a>
+      <a href="06-resilience.html" class="nav-link">06 Resilience</a>
+      <a href="07-authentication.html" class="nav-link">07 Authentication</a>
+      <a href="08-rate-limiting.html" class="nav-link">08 Rate Limiting</a>
+      <a href="09-canary-deployments.html" class="nav-link">09 Canary</a>
+      <a href="10-transforms.html" class="nav-link">10 Transforms</a>
+      <a href="11-admin-ui.html" class="nav-link active">11 Admin UI</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="hero">
+    <div class="hero-label">Chapter 11</div>
+    <h1>Admin UI</h1>
+    <p>SmartGateway ships with a full-featured Blazor Server admin interface for managing every aspect of the gateway. Built with a dark theme, it provides 11 pages covering clusters, routes, destinations, health, resilience, authentication, canary deployments, and audit logging.</p>
+  </div>
+
+  <!-- Section 1: Page Directory -->
+  <section id="pages">
+    <h2>All 11 Pages</h2>
+    <p>The Admin UI is a Blazor Server application (<code>SmartGateway.Admin</code>) with interactive server-side rendering. Each page communicates directly with the SQL Server database via <code>IDbContextFactory&lt;SmartGatewayDbContext&gt;</code>.</p>
+
+    <div class="pages-grid">
+      <div class="page-card">
+        <div class="page-num">01</div>
+        <div class="page-name">Dashboard</div>
+        <div class="page-route">/</div>
+        <div class="page-desc">KPI stats, active clusters, routes, healthy/unhealthy nodes.</div>
+      </div>
+      <div class="page-card">
+        <div class="page-num">02</div>
+        <div class="page-name">Clusters</div>
+        <div class="page-route">/clusters</div>
+        <div class="page-desc">Card grid of upstream clusters with destinations and health badges.</div>
+      </div>
+      <div class="page-card">
+        <div class="page-num">03</div>
+        <div class="page-name">Routes</div>
+        <div class="page-route">/routes</div>
+        <div class="page-desc">Table of all routes with path, cluster, priority, auth, and status.</div>
+      </div>
+      <div class="page-card">
+        <div class="page-num">04</div>
+        <div class="page-name">Destinations</div>
+        <div class="page-route">/destinations</div>
+        <div class="page-desc">Table of upstream instances with health, weight, and heartbeat data.</div>
+      </div>
+      <div class="page-card">
+        <div class="page-num">05</div>
+        <div class="page-name">Canary</div>
+        <div class="page-route">/canary</div>
+        <div class="page-desc">Weight sliders for gradual traffic rollout with live distribution bar.</div>
+      </div>
+      <div class="page-card">
+        <div class="page-num">06</div>
+        <div class="page-name">Health</div>
+        <div class="page-route">/health</div>
+        <div class="page-desc">Node grid showing health status with KPI stats and re-admit actions.</div>
+      </div>
+      <div class="page-card">
+        <div class="page-num">07</div>
+        <div class="page-name">Resilience</div>
+        <div class="page-route">/resilience</div>
+        <div class="page-desc">Circuit breaker table with retry, timeout, and failure ratio config.</div>
+      </div>
+      <div class="page-card">
+        <div class="page-num">08</div>
+        <div class="page-name">Auth &amp; Keys</div>
+        <div class="page-route">/auth</div>
+        <div class="page-desc">API key management with create, revoke, delete, and scope badges.</div>
+      </div>
+      <div class="page-card">
+        <div class="page-num">09</div>
+        <div class="page-name">Audit Log</div>
+        <div class="page-route">/audit</div>
+        <div class="page-desc">Filtered changelog with entity type and action dropdowns.</div>
+      </div>
+      <div class="page-card">
+        <div class="page-num">10</div>
+        <div class="page-name">Error</div>
+        <div class="page-route">/Error</div>
+        <div class="page-desc">Generic error page for unhandled exceptions.</div>
+      </div>
+      <div class="page-card">
+        <div class="page-num">11</div>
+        <div class="page-name">Not Found</div>
+        <div class="page-route">/not-found</div>
+        <div class="page-desc">404 page for unmatched routes.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 2: Dashboard -->
+  <section id="dashboard">
+    <h2>Dashboard (<code>/</code>)</h2>
+    <p>The Dashboard is the landing page, providing an at-a-glance overview of the entire gateway state.</p>
+
+    <h3>KPI Stats Grid</h3>
+    <p>Four stat cards across the top display real-time metrics:</p>
+
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px">
+      <div class="mock-stat">
+        <div class="mock-stat-val" style="color:var(--accent)">4<span style="font-size:12px;color:var(--text3)">/5</span></div>
+        <div class="mock-stat-label">Active clusters</div>
+      </div>
+      <div class="mock-stat">
+        <div class="mock-stat-val" style="color:var(--accent2)">12<span style="font-size:12px;color:var(--text3)">/14</span></div>
+        <div class="mock-stat-label">Active routes</div>
+      </div>
+      <div class="mock-stat">
+        <div class="mock-stat-val" style="color:var(--success)">8<span style="font-size:12px;color:var(--text3)">/9</span></div>
+        <div class="mock-stat-label">Healthy nodes</div>
+      </div>
+      <div class="mock-stat">
+        <div class="mock-stat-val" style="color:var(--danger)">1</div>
+        <div class="mock-stat-label">Unhealthy</div>
+      </div>
+    </div>
+
+    <p>Each stat card includes:</p>
+    <ul>
+      <li>A <strong>progress bar</strong> showing the ratio (active/total) filled with the appropriate accent color.</li>
+      <li>A <strong>delta indicator</strong> on the Unhealthy card: green "All systems operational" or red "X node(s) evicted".</li>
+    </ul>
+
+    <h3>Recent Clusters and Routes</h3>
+    <p>Below the stats, two side-by-side cards show the 5 most recently updated clusters and routes, each with status indicators, load balancing policy badges, and path patterns.</p>
+  </section>
+
+  <!-- Section 3: Clusters -->
+  <section id="clusters">
+    <h2>Clusters (<code>/clusters</code>)</h2>
+    <p>The Clusters page displays all upstream service groups in a responsive card grid (2 columns).</p>
+
+    <h3>Cluster Card Layout</h3>
+    <p>Each cluster card contains:</p>
+    <ul>
+      <li><strong>Header row:</strong> Cluster ID, load balancing policy, destination count, and a health badge (<span class="badge badge-green">healthy</span>, <span class="badge badge-warn">degraded</span>, or <span class="badge badge-red">inactive</span>).</li>
+      <li><strong>Destination list:</strong> Each destination shown as a row with a colored health dot, address, weight (<code>w:100</code>), and status badge.</li>
+      <li><strong>Action footer:</strong> Activate/Deactivate toggle button and a red Delete button.</li>
+    </ul>
+
+    <div class="mock-ui">
+      <div class="mock-header">
+        <div>
+          <div class="mock-title">orders-svc</div>
+          <div class="mock-sub">Weighted -- 2 destination(s)</div>
+        </div>
+        <span class="badge badge-green" style="margin-left:auto">healthy</span>
+      </div>
+      <div class="mock-body">
+        <div class="mock-row">
+          <div class="mock-dot" style="background:var(--success)"></div>
+          <span style="font-family:var(--mono);font-size:12px;color:var(--text2)">http://10.0.1.10:8080</span>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-left:auto">w:100</span>
+          <span class="badge badge-green" style="font-size:10px;margin-left:8px">active</span>
+        </div>
+        <div class="mock-row">
+          <div class="mock-dot" style="background:var(--success)"></div>
+          <span style="font-family:var(--mono);font-size:12px;color:var(--text2)">http://10.0.1.20:8080</span>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-left:auto">w:10</span>
+          <span class="badge badge-green" style="font-size:10px;margin-left:8px">active</span>
+        </div>
+      </div>
+    </div>
+
+    <h3>Creating a Cluster</h3>
+    <p>Click <strong>"+ New Cluster"</strong> to open the creation modal with two fields:</p>
+    <ul>
+      <li><strong>Cluster ID:</strong> A unique identifier (e.g., <code>orders-service</code>)</li>
+      <li><strong>Load balancing:</strong> Dropdown with options: RoundRobin, LeastRequests, PowerOfTwoChoices, Random, Weighted</li>
+    </ul>
+  </section>
+
+  <!-- Section 4: Routes -->
+  <section id="routes">
+    <h2>Routes (<code>/routes</code>)</h2>
+    <p>The Routes page shows all routing rules in a sortable table format.</p>
+
+    <h3>Table Columns</h3>
+    <table>
+      <thead>
+        <tr><th>Column</th><th>Content</th><th>Display</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Route ID</td><td>Unique route identifier</td><td>Highlighted tag pill</td></tr>
+        <tr><td>Path pattern</td><td>URL match pattern</td><td>Monospace font</td></tr>
+        <tr><td>Cluster</td><td>Target cluster ID</td><td>Plain text</td></tr>
+        <tr><td>Priority</td><td>Match priority (lower = first)</td><td>Monospace number</td></tr>
+        <tr><td>Auth</td><td>Authentication requirement</td><td><span class="badge badge-purple">ApiKey</span> or <span class="badge badge-gray">none</span></td></tr>
+        <tr><td>Status</td><td>Active or inactive</td><td><span class="badge badge-green">active</span> / <span class="badge badge-red">inactive</span></td></tr>
+        <tr><td>Actions</td><td>Delete button</td><td>Red danger button</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Creating a Route</h3>
+    <p>The route creation modal provides these fields:</p>
+    <ul>
+      <li><strong>Route ID</strong> -- unique identifier</li>
+      <li><strong>Cluster</strong> -- dropdown populated from existing clusters</li>
+      <li><strong>Path pattern</strong> -- YARP path match (e.g., <code>/api/orders/{**catch-all}</code>)</li>
+      <li><strong>Methods</strong> -- comma-separated HTTP methods (e.g., <code>GET,POST,PUT</code>)</li>
+      <li><strong>Priority</strong> -- integer, lower values match first</li>
+      <li><strong>Match header</strong> -- optional header-based routing (e.g., <code>X-Tenant-Id</code>)</li>
+      <li><strong>Header value</strong> -- value to match against the header</li>
+    </ul>
+  </section>
+
+  <!-- Section 5: Destinations -->
+  <section id="destinations">
+    <h2>Destinations (<code>/destinations</code>)</h2>
+    <p>The Destinations page lists all upstream service instances in a table with health management controls.</p>
+
+    <h3>Table Columns</h3>
+    <p>Destination ID, Cluster, Address (monospace), Weight, Health (<span class="badge badge-green">healthy</span> / <span class="badge badge-red">evicted</span>), Last heartbeat (time), and action buttons.</p>
+
+    <h3>Health Management</h3>
+    <p>Each destination has inline actions:</p>
+    <ul>
+      <li><strong>Evict:</strong> Marks a healthy destination as unhealthy, removing it from the load balancer.</li>
+      <li><strong>Re-admit:</strong> Marks an evicted destination as healthy again.</li>
+      <li><strong>Delete:</strong> Permanently removes the destination from the database.</li>
+    </ul>
+
+    <h3>Summary Badges</h3>
+    <p>At the top of the table, summary badges show total count, healthy count (green), and unhealthy count (red) at a glance.</p>
+  </section>
+
+  <!-- Section 6: Canary -->
+  <section id="canary">
+    <h2>Canary Deployments (<code>/canary</code>)</h2>
+    <p>The Canary page is purpose-built for managing weighted traffic distribution during gradual rollouts.</p>
+
+    <h3>Interface Elements</h3>
+    <p>For each cluster with destinations, the page shows:</p>
+    <ul>
+      <li><strong>Cluster header:</strong> ID, load balancing policy, destination count, active status.</li>
+      <li><strong>Destination rows:</strong> Each has a health dot, name, address, a range slider (0-100), current weight, and calculated percentage.</li>
+      <li><strong>Traffic distribution bar:</strong> A stacked horizontal bar at the bottom showing proportional shares. Each segment is colored by health status (accent for healthy, red for evicted).</li>
+    </ul>
+
+    <div class="info-box">
+      <strong>Real-time updates:</strong> Dragging a slider immediately saves the new weight to the database. All percentages and the distribution bar recalculate on the fly. No save button needed.
+    </div>
+
+    <h3>Weight Calculation</h3>
+    <pre><code><span class="cm">// Displayed percentage for each destination:</span>
+percentage = (destination.Weight / cluster.Destinations.Sum(d => d.Weight)) * <span class="num">100</span>
+
+<span class="cm">// Example: v1=100, v2=10 --> total=110</span>
+<span class="cm">// v1: 100/110 = 90.9%</span>
+<span class="cm">// v2:  10/110 =  9.1%</span></code></pre>
+  </section>
+
+  <!-- Section 7: Health -->
+  <section id="health">
+    <h2>Health Monitor (<code>/health</code>)</h2>
+    <p>The Health page provides a visual grid of all destination health states with summary statistics.</p>
+
+    <h3>KPI Stats</h3>
+    <p>Four stat cards show: Total destinations, Healthy count (green), Evicted count (red if > 0), and Health rate percentage.</p>
+
+    <h3>Health Grid</h3>
+    <p>Each destination is shown as a card-like node in a responsive grid. Each node displays:</p>
+    <ul>
+      <li><strong>Name:</strong> <code>ClusterId / DestinationId</code> format</li>
+      <li><strong>Address:</strong> Monospace text showing the upstream URL</li>
+      <li><strong>Status badge:</strong> <span class="badge badge-green">healthy</span> or <span class="badge badge-red">evicted</span></li>
+      <li><strong>Weight:</strong> Shown as <code>w:100</code> in monospace</li>
+    </ul>
+    <p>Unhealthy nodes have a red-tinted border and show a "Re-admit" button for manual recovery.</p>
+  </section>
+
+  <!-- Section 8: Resilience -->
+  <section id="resilience">
+    <h2>Resilience (<code>/resilience</code>)</h2>
+    <p>The Resilience page manages Polly v8 resilience policies (circuit breaker, retry, timeout) per cluster.</p>
+
+    <h3>Circuit Breaker Table</h3>
+    <table>
+      <thead>
+        <tr><th>Column</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Cluster</td><td>Cluster ID shown as a tag pill</td></tr>
+        <tr><td>Circuit</td><td>Green dot "closed" if enabled, gray "disabled" badge if not</td></tr>
+        <tr><td>Failure ratio</td><td>Threshold before circuit opens (e.g., <code>0.50</code>)</td></tr>
+        <tr><td>Break duration</td><td>How long the circuit stays open (e.g., <code>30s</code>)</td></tr>
+        <tr><td>Max retries</td><td>Retry attempts before giving up (e.g., <code>3x</code>)</td></tr>
+        <tr><td>Backoff</td><td>Retry strategy: Exponential or Linear</td></tr>
+        <tr><td>Timeout</td><td>Per-request timeout (e.g., <code>10s</code>)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Policy Configuration Modal</h3>
+    <p>The "+ Configure Policy" button opens a modal with fields for: Cluster (dropdown), Retry max attempts, Backoff type (Exponential/Linear), Retry delay (ms), Circuit break duration (ms), and Timeout (ms). If a policy already exists for the selected cluster, it is replaced.</p>
+  </section>
+
+  <!-- Section 9: Auth & Keys -->
+  <section id="auth">
+    <h2>Auth &amp; Keys (<code>/auth</code>)</h2>
+    <p>The Auth &amp; Keys page is the API key management center for the gateway.</p>
+
+    <h3>Key Table</h3>
+    <p>Each key row shows:</p>
+    <ul>
+      <li><strong>Key ID:</strong> First 12 characters of the hash followed by "..." (full hash never shown)</li>
+      <li><strong>Name:</strong> Human-readable label</li>
+      <li><strong>Scopes:</strong> Displayed as individual gray badge pills</li>
+      <li><strong>Created:</strong> Date in <code>yyyy-MM-dd</code> format</li>
+      <li><strong>Last used:</strong> Time (<code>HH:mm:ss</code>) or "never"</li>
+      <li><strong>Status:</strong> <span class="badge badge-green">active</span> or <span class="badge badge-red">revoked</span></li>
+      <li><strong>Actions:</strong> "Revoke" (for active) or "Delete" (for revoked)</li>
+    </ul>
+
+    <h3>Key Creation Flow</h3>
+    <p>When you create a new key:</p>
+    <ol>
+      <li>Click "+ New API Key" to open the modal</li>
+      <li>Enter a <strong>Name</strong> and optional comma-separated <strong>Scopes</strong></li>
+      <li>Click "Generate key"</li>
+      <li>The system generates a raw key (<code>sgw_{guid}</code>), computes its SHA-256 hash, and saves only the hash</li>
+      <li>A green banner appears at the top with the raw key and a warning: "Copy now -- this won't be shown again"</li>
+    </ol>
+
+    <div class="mock-ui" style="border-color:rgba(0,212,170,.25)">
+      <div class="mock-body" style="background:rgba(0,212,170,.04)">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span class="badge badge-green">New key created</span>
+          <code style="font-family:var(--mono);font-size:12px;color:var(--accent)">sgw_8f14e45fceea167a5a36dedd4bea2543</code>
+          <span style="font-size:10px;color:var(--text3);margin-left:auto">Copy now -- won't be shown again</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 10: Audit Log -->
+  <section id="audit">
+    <h2>Audit Log (<code>/audit</code>)</h2>
+    <p>The Audit Log page provides a complete changelog of every entity modification in the gateway, with powerful filtering.</p>
+
+    <h3>Filter Bar</h3>
+    <p>Two dropdown filters at the top allow narrowing results:</p>
+    <ul>
+      <li><strong>Entity type:</strong> All entities, Route, Cluster, or Destination</li>
+      <li><strong>Action:</strong> All actions, CREATE, UPDATE, DELETE, REGISTER, or DEREGISTER</li>
+    </ul>
+    <p>Selecting a filter immediately refreshes the log (using Blazor's <code>@bind:after</code> pattern).</p>
+
+    <h3>Log Entry Format</h3>
+    <p>Each audit entry displays as a row with:</p>
+    <ul>
+      <li><strong>Operation indicator:</strong> A colored dot (green for CREATE/REGISTER, blue for UPDATE, red for DELETE/DEREGISTER)</li>
+      <li><strong>Entity:</strong> <code>EntityType / EntityId</code> (e.g., "Route / orders-api")</li>
+      <li><strong>Action &amp; details:</strong> The action verb plus a truncated JSON snippet of new values (max 80 characters)</li>
+      <li><strong>Timestamp:</strong> Time in <code>HH:mm:ss</code> format</li>
+    </ul>
+    <p>The log shows the 100 most recent entries matching the current filters, ordered newest first.</p>
+
+    <h3>Audit Log Entity</h3>
+    <pre><code><span class="kw">public class</span> <span class="fn">GatewayAuditLog</span>
+{
+    <span class="kw">public int</span> Id { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public string</span> EntityType { <span class="kw">get</span>; <span class="kw">set</span>; }  <span class="cm">// "Route", "Cluster", "Destination"</span>
+    <span class="kw">public string</span> EntityId { <span class="kw">get</span>; <span class="kw">set</span>; }    <span class="cm">// The entity's primary key</span>
+    <span class="kw">public string</span> Action { <span class="kw">get</span>; <span class="kw">set</span>; }      <span class="cm">// "CREATE", "UPDATE", "DELETE", etc.</span>
+    <span class="kw">public string</span> ChangedBy { <span class="kw">get</span>; <span class="kw">set</span>; }   <span class="cm">// Actor identity</span>
+    <span class="kw">public string?</span> OldValues { <span class="kw">get</span>; <span class="kw">set</span>; }  <span class="cm">// JSON snapshot before change</span>
+    <span class="kw">public string?</span> NewValues { <span class="kw">get</span>; <span class="kw">set</span>; }  <span class="cm">// JSON snapshot after change</span>
+    <span class="kw">public</span> DateTime ChangedAt { <span class="kw">get</span>; <span class="kw">set</span>; }
+}</code></pre>
+  </section>
+
+  <!-- Section 11: Design System -->
+  <section id="design">
+    <h2>Dark Theme Design System</h2>
+    <p>The Admin UI uses a consistent dark theme optimized for control-plane dashboards where operators may spend extended time monitoring the system.</p>
+
+    <h3>Color Palette</h3>
+    <div class="design-grid">
+      <div class="design-card">
+        <h4>Backgrounds</h4>
+        <p style="margin-bottom:8px"><span class="color-swatch" style="background:#0d1720"></span> <code>#0d1720</code> -- Page background</p>
+        <p style="margin-bottom:8px"><span class="color-swatch" style="background:#13202e"></span> <code>#13202e</code> -- Card / surface</p>
+        <p style="margin-bottom:0"><span class="color-swatch" style="background:#182a3a"></span> <code>#182a3a</code> -- Input / surface2</p>
+      </div>
+      <div class="design-card">
+        <h4>Text</h4>
+        <p style="margin-bottom:8px"><span class="color-swatch" style="background:#e8edf2"></span> <code>#e8edf2</code> -- Primary text</p>
+        <p style="margin-bottom:8px"><span class="color-swatch" style="background:#a4b3c4"></span> <code>#a4b3c4</code> -- Secondary text</p>
+        <p style="margin-bottom:0"><span class="color-swatch" style="background:#5e7a94"></span> <code>#5e7a94</code> -- Tertiary / muted</p>
+      </div>
+      <div class="design-card">
+        <h4>Accent Colors</h4>
+        <p style="margin-bottom:8px"><span class="color-swatch" style="background:#00d4aa"></span> <code>#00d4aa</code> -- Primary accent / success</p>
+        <p style="margin-bottom:8px"><span class="color-swatch" style="background:#6c5ce7"></span> <code>#6c5ce7</code> -- Secondary accent</p>
+        <p style="margin-bottom:0"><span class="color-swatch" style="background:#1e3348"></span> <code>#1e3348</code> -- Border</p>
+      </div>
+      <div class="design-card">
+        <h4>Status Colors</h4>
+        <p style="margin-bottom:8px"><span class="color-swatch" style="background:#00d4aa"></span> <code>#00d4aa</code> -- Success / healthy</p>
+        <p style="margin-bottom:8px"><span class="color-swatch" style="background:#ff4757"></span> <code>#ff4757</code> -- Danger / error</p>
+        <p style="margin-bottom:0"><span class="color-swatch" style="background:#ffa502"></span> <code>#ffa502</code> -- Warning / degraded</p>
+      </div>
+    </div>
+
+    <h3>Typography</h3>
+    <div class="card">
+      <p style="margin-bottom:8px"><strong>Headings &amp; body:</strong> <span style="font-family:var(--font)">Syne</span> -- A modern geometric sans-serif with character.</p>
+      <p style="margin-bottom:0"><strong>Code &amp; monospace:</strong> <span style="font-family:var(--mono)">JetBrains Mono</span> -- A developer-focused monospace font designed for long reading sessions.</p>
+    </div>
+
+    <h3>Component Patterns</h3>
+    <ul>
+      <li><strong>Cards:</strong> <code>background: var(--surface)</code>, <code>border: 1px solid var(--border)</code>, <code>border-radius: 10px</code></li>
+      <li><strong>Badges:</strong> Small pills with semi-transparent backgrounds matching their semantic color</li>
+      <li><strong>Buttons:</strong> Primary (accent fill), Ghost (transparent with border), Danger (red), Small variants (<code>btn-sm</code>)</li>
+      <li><strong>Tables:</strong> No outer border, subtle row borders, hover highlight with accent tint</li>
+      <li><strong>Forms:</strong> Dark inputs (<code>var(--surface2)</code>), labeled with uppercase small text</li>
+    </ul>
+  </section>
+
+  <!-- Section 12: Modal Pattern -->
+  <section id="modals">
+    <h2>How Modals Work</h2>
+    <p>Most creation actions (new cluster, new route, new destination, new API key, new resilience policy) use a consistent modal pattern implemented in Blazor.</p>
+
+    <h3>Modal Structure</h3>
+    <pre><code><span class="cm">&lt;!-- Blazor modal pattern used across all pages --&gt;</span>
+@<span class="kw">if</span> (_showModal)
+{
+    <span class="op">&lt;div</span> <span class="kw">class</span>=<span class="str">"modal-overlay open"</span> @onclick=<span class="str">"OnOverlayClick"</span><span class="op">&gt;</span>
+        <span class="op">&lt;div</span> <span class="kw">class</span>=<span class="str">"modal"</span> @onclick:stopPropagation=<span class="str">"true"</span><span class="op">&gt;</span>
+            <span class="op">&lt;div</span> <span class="kw">class</span>=<span class="str">"modal-title"</span><span class="op">&gt;</span>New Entity<span class="op">&lt;/div&gt;</span>
+
+            <span class="cm">&lt;!-- Form fields --&gt;</span>
+            <span class="op">&lt;div</span> <span class="kw">class</span>=<span class="str">"form-row"</span><span class="op">&gt;</span>
+                <span class="op">&lt;div</span> <span class="kw">class</span>=<span class="str">"form-group"</span><span class="op">&gt;</span>
+                    <span class="op">&lt;div</span> <span class="kw">class</span>=<span class="str">"form-label"</span><span class="op">&gt;</span>Field Name<span class="op">&lt;/div&gt;</span>
+                    <span class="op">&lt;input</span> @bind=<span class="str">"_field"</span> <span class="kw">class</span>=<span class="str">"form-input"</span> /&gt;
+                <span class="op">&lt;/div&gt;</span>
+            <span class="op">&lt;/div&gt;</span>
+
+            <span class="cm">&lt;!-- Action buttons --&gt;</span>
+            <span class="op">&lt;div</span> <span class="kw">class</span>=<span class="str">"modal-actions"</span><span class="op">&gt;</span>
+                <span class="op">&lt;button</span> <span class="kw">class</span>=<span class="str">"btn btn-ghost"</span><span class="op">&gt;</span>Cancel<span class="op">&lt;/button&gt;</span>
+                <span class="op">&lt;button</span> <span class="kw">class</span>=<span class="str">"btn btn-primary"</span> @onclick=<span class="str">"Submit"</span><span class="op">&gt;</span>Create<span class="op">&lt;/button&gt;</span>
+            <span class="op">&lt;/div&gt;</span>
+        <span class="op">&lt;/div&gt;</span>
+    <span class="op">&lt;/div&gt;</span>
+}</code></pre>
+
+    <h3>Modal Behaviors</h3>
+    <table>
+      <thead>
+        <tr><th>Behavior</th><th>Implementation</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Open</td><td>Set <code>_showModal = true</code> (button click handler)</td></tr>
+        <tr><td>Close on overlay click</td><td><code>@onclick="OnOverlayClick"</code> sets <code>_showModal = false</code></td></tr>
+        <tr><td>Prevent close on modal body click</td><td><code>@onclick:stopPropagation="true"</code> on the inner <code>.modal</code> div</td></tr>
+        <tr><td>Close on Cancel</td><td>Cancel button sets <code>_showModal = false</code></td></tr>
+        <tr><td>Submit and close</td><td>Create button calls async method that saves to DB, then sets <code>_showModal = false</code> and reloads data</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Example: New Cluster Modal</h3>
+    <div class="mock-modal">
+      <div class="mock-modal-title">New Cluster</div>
+      <div class="mock-field">
+        <div class="mock-field-label">Cluster ID</div>
+        <div class="mock-input">e.g. orders-service</div>
+      </div>
+      <div class="mock-field">
+        <div class="mock-field-label">Load balancing</div>
+        <div class="mock-select">RoundRobin</div>
+      </div>
+      <div class="mock-actions">
+        <div class="mock-btn-ghost">Cancel</div>
+        <div class="mock-btn">Create cluster</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 13: Technical Stack -->
+  <section id="tech-stack">
+    <h2>Technical Stack</h2>
+    <p>The Admin UI is built with modern .NET technologies:</p>
+
+    <table>
+      <thead>
+        <tr><th>Component</th><th>Technology</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Framework</td><td>Blazor Server (.NET 10)</td></tr>
+        <tr><td>Render mode</td><td><code>InteractiveServer</code> (real-time SignalR connection)</td></tr>
+        <tr><td>Database access</td><td><code>IDbContextFactory&lt;SmartGatewayDbContext&gt;</code></td></tr>
+        <tr><td>Database</td><td>SQL Server (via Entity Framework Core)</td></tr>
+        <tr><td>CSS</td><td>Custom inline styles using CSS custom properties</td></tr>
+        <tr><td>Fonts</td><td>Syne (UI) + JetBrains Mono (code)</td></tr>
+        <tr><td>Static assets</td><td><code>MapStaticAssets()</code> (.NET 10 asset pipeline)</td></tr>
+        <tr><td>Anti-forgery</td><td>Built-in via <code>UseAntiforgery()</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>Startup Configuration</h3>
+    <pre><code><span class="cm">// SmartGateway.Admin/Program.cs</span>
+<span class="kw">var</span> builder = WebApplication.<span class="fn">CreateBuilder</span>(args);
+
+builder.Services.<span class="fn">AddRazorComponents</span>()
+    .<span class="fn">AddInteractiveServerComponents</span>();
+
+builder.Services.<span class="fn">AddDbContextFactory</span>&lt;SmartGatewayDbContext&gt;(options =&gt;
+    options.<span class="fn">UseSqlServer</span>(
+        builder.Configuration.<span class="fn">GetConnectionString</span>(<span class="str">"SmartGateway"</span>)));
+
+<span class="kw">var</span> app = builder.<span class="fn">Build</span>();
+
+<span class="cm">// Auto-migrate on startup</span>
+<span class="kw">using</span> (<span class="kw">var</span> scope = app.Services.<span class="fn">CreateScope</span>())
+{
+    <span class="kw">var</span> dbFactory = scope.ServiceProvider
+        .<span class="fn">GetRequiredService</span>&lt;IDbContextFactory&lt;SmartGatewayDbContext&gt;&gt;();
+    <span class="kw">using var</span> db = dbFactory.<span class="fn">CreateDbContext</span>();
+    db.Database.<span class="fn">Migrate</span>();
+}
+
+app.<span class="fn">UseAntiforgery</span>();
+app.<span class="fn">MapStaticAssets</span>();
+app.<span class="fn">MapRazorComponents</span>&lt;App&gt;()
+    .<span class="fn">AddInteractiveServerRenderMode</span>();
+
+app.<span class="fn">Run</span>();</code></pre>
+  </section>
+
+</div>
+
+<footer>
+  SmartGateway Documentation &mdash; API Gateway built on YARP
+</footer>
+
+</body>
+</html>

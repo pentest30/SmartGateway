@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rate Limiting - SmartGateway Documentation</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0d1720;--surface:#13202e;--surface2:#182a3a;--border:#1e3348;
+    --accent:#00d4aa;--accent2:#6c5ce7;--text:#e8edf2;--text2:#a4b3c4;--text3:#5e7a94;
+    --success:#00d4aa;--danger:#ff4757;--warn:#ffa502;
+    --font:'Syne',sans-serif;--mono:'JetBrains Mono',monospace;
+    --radius:10px;--radius-sm:6px;
+  }
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--text);font-family:var(--font);line-height:1.7;font-size:15px}
+  a{color:var(--accent);text-decoration:none;transition:opacity .2s}
+  a:hover{opacity:.8}
+
+  .navbar{position:sticky;top:0;z-index:100;background:rgba(13,23,32,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0 32px}
+  .nav-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;height:56px;gap:24px;overflow-x:auto}
+  .nav-brand{font-weight:800;font-size:17px;color:var(--accent);white-space:nowrap;letter-spacing:-.3px}
+  .nav-links{display:flex;gap:6px;flex:1;overflow-x:auto;scrollbar-width:none}
+  .nav-links::-webkit-scrollbar{display:none}
+  .nav-link{font-size:12.5px;padding:6px 11px;border-radius:var(--radius-sm);color:var(--text2);white-space:nowrap;transition:all .2s;font-weight:500}
+  .nav-link:hover{background:var(--surface);color:var(--text)}
+  .nav-link.active{background:rgba(0,212,170,.1);color:var(--accent)}
+
+  .container{max-width:920px;margin:0 auto;padding:48px 32px 80px}
+
+  .hero{margin-bottom:56px}
+  .hero-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin-bottom:10px}
+  .hero h1{font-size:40px;font-weight:800;line-height:1.15;letter-spacing:-.5px;margin-bottom:14px}
+  .hero p{font-size:17px;color:var(--text2);max-width:640px;line-height:1.7}
+
+  section{margin-bottom:56px}
+  h2{font-size:26px;font-weight:700;margin-bottom:18px;letter-spacing:-.3px;padding-top:8px;border-top:1px solid var(--border)}
+  h3{font-size:19px;font-weight:600;margin-bottom:12px;color:var(--text)}
+  h4{font-size:16px;font-weight:600;margin-bottom:10px;color:var(--accent)}
+  p,li{color:var(--text2);line-height:1.8}
+  p{margin-bottom:14px}
+  ul,ol{margin-left:20px;margin-bottom:16px}
+  li{margin-bottom:6px}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px}
+  .card-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px}
+
+  pre{background:#0a1018;border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;overflow-x:auto;margin-bottom:20px;line-height:1.65}
+  code{font-family:var(--mono);font-size:13px}
+  pre code{color:#c8d6e5}
+  :not(pre)>code{background:var(--surface2);padding:2px 7px;border-radius:4px;font-size:13px;color:var(--accent)}
+
+  .info-box{border-left:3px solid var(--accent);background:rgba(0,212,170,.06);padding:16px 20px;border-radius:0 var(--radius) var(--radius) 0;margin-bottom:20px}
+  .info-box.warn{border-left-color:var(--warn);background:rgba(255,165,2,.06)}
+  .info-box.danger{border-left-color:var(--danger);background:rgba(255,71,87,.06)}
+  .info-box strong{color:var(--text);font-weight:600}
+
+  table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:14px}
+  th{text-align:left;font-weight:600;color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:1px;padding:10px 14px;border-bottom:1px solid var(--border)}
+  td{padding:12px 14px;border-bottom:1px solid var(--border);color:var(--text2)}
+  tr:hover td{background:rgba(0,212,170,.03)}
+
+  /* ── Strategy cards ── */
+  .strategy-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px}
+  .strategy-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;position:relative;overflow:hidden}
+  .strategy-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+  .strategy-card:nth-child(1)::before{background:var(--accent)}
+  .strategy-card:nth-child(2)::before{background:var(--accent2)}
+  .strategy-card:nth-child(3)::before{background:var(--warn)}
+  .strategy-name{font-size:17px;font-weight:700;margin-bottom:6px;color:var(--text)}
+  .strategy-desc{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:14px}
+
+  /* ── Visual diagrams ── */
+  .window-viz{display:flex;gap:4px;align-items:flex-end;height:60px;margin:16px 0}
+  .window-bar{flex:1;border-radius:3px 3px 0 0;min-width:18px;position:relative}
+  .window-bar .bar-label{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:9px;font-family:var(--mono);color:var(--text3);white-space:nowrap}
+
+  .flow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px;padding:20px;background:var(--surface);border-radius:var(--radius);border:1px solid var(--border)}
+  .flow-step{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 16px;font-size:13px;font-weight:500;color:var(--text);text-align:center;min-width:100px}
+  .flow-arrow{color:var(--accent);font-size:20px;font-weight:700}
+  .flow-step.highlight{border-color:var(--accent);background:rgba(0,212,170,.08);color:var(--accent)}
+  .flow-step.danger{border-color:var(--danger);background:rgba(255,71,87,.08);color:var(--danger)}
+
+  .badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px}
+  .badge-green{background:rgba(0,212,170,.12);color:var(--success)}
+  .badge-red{background:rgba(255,71,87,.12);color:var(--danger)}
+  .badge-warn{background:rgba(255,165,2,.12);color:var(--warn)}
+
+  .steps{counter-reset:step}
+  .step{counter-increment:step;position:relative;padding-left:48px;margin-bottom:28px}
+  .step::before{content:counter(step);position:absolute;left:0;top:0;width:32px;height:32px;border-radius:50%;background:rgba(0,212,170,.12);color:var(--accent);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,212,170,.25)}
+  .step h3{margin-bottom:8px}
+
+  @media(max-width:768px){.strategy-grid{grid-template-columns:1fr}}
+
+  footer{border-top:1px solid var(--border);padding:32px;text-align:center;color:var(--text3);font-size:13px}
+  .kw{color:#c678dd} .str{color:#98c379} .cm{color:#5c6370;font-style:italic} .fn{color:#61afef} .num{color:#d19a66} .op{color:#56b6c2}
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-inner">
+    <div class="nav-brand">SmartGateway</div>
+    <div class="nav-links">
+      <a href="01-getting-started.html" class="nav-link">01 Getting Started</a>
+      <a href="02-architecture.html" class="nav-link">02 Architecture</a>
+      <a href="03-clusters.html" class="nav-link">03 Clusters</a>
+      <a href="04-routes.html" class="nav-link">04 Routes</a>
+      <a href="05-health-checks.html" class="nav-link">05 Health Checks</a>
+      <a href="06-resilience.html" class="nav-link">06 Resilience</a>
+      <a href="07-authentication.html" class="nav-link">07 Authentication</a>
+      <a href="08-rate-limiting.html" class="nav-link active">08 Rate Limiting</a>
+      <a href="09-canary-deployments.html" class="nav-link">09 Canary</a>
+      <a href="10-transforms.html" class="nav-link">10 Transforms</a>
+      <a href="11-admin-ui.html" class="nav-link">11 Admin UI</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="hero">
+    <div class="hero-label">Chapter 08</div>
+    <h1>Rate Limiting</h1>
+    <p>SmartGateway supports three rate limiting strategies -- FixedWindow, SlidingWindow, and TokenBucket -- configured per-route as JSON. Protect your upstream services from abuse while providing clear <code>429 Too Many Requests</code> responses to clients.</p>
+  </div>
+
+  <!-- Section 1: Three Strategies -->
+  <section id="strategies">
+    <h2>Three Strategies</h2>
+    <p>SmartGateway uses the .NET <code>System.Threading.RateLimiting</code> library to implement three distinct algorithms, each suited to different traffic patterns.</p>
+
+    <div class="strategy-grid">
+      <div class="strategy-card">
+        <div class="strategy-name">FixedWindow</div>
+        <div class="strategy-desc">Resets the counter at fixed intervals. Simple and predictable. Allows bursts at window boundaries.</div>
+        <div class="window-viz">
+          <div class="window-bar" style="height:80%;background:var(--accent)"><div class="bar-label">45</div></div>
+          <div class="window-bar" style="height:100%;background:var(--danger)"><div class="bar-label">50</div></div>
+          <div class="window-bar" style="height:30%;background:var(--accent)"><div class="bar-label">15</div></div>
+          <div class="window-bar" style="height:60%;background:var(--accent)"><div class="bar-label">30</div></div>
+          <div class="window-bar" style="height:100%;background:var(--danger)"><div class="bar-label">50</div></div>
+        </div>
+        <p style="font-size:11px;color:var(--text3);margin:0;font-family:var(--mono)">Window: 60s | Limit: 50</p>
+      </div>
+
+      <div class="strategy-card">
+        <div class="strategy-name">SlidingWindow</div>
+        <div class="strategy-desc">Divides the window into segments and slides forward. Smoother than fixed, prevents boundary bursts.</div>
+        <div class="window-viz">
+          <div class="window-bar" style="height:30%;background:var(--accent2);opacity:.4"><div class="bar-label">s1</div></div>
+          <div class="window-bar" style="height:50%;background:var(--accent2);opacity:.6"><div class="bar-label">s2</div></div>
+          <div class="window-bar" style="height:40%;background:var(--accent2);opacity:.8"><div class="bar-label">s3</div></div>
+          <div class="window-bar" style="height:60%;background:var(--accent2)"><div class="bar-label">s4</div></div>
+        </div>
+        <p style="font-size:11px;color:var(--text3);margin:0;font-family:var(--mono)">4 segments | Window: 60s</p>
+      </div>
+
+      <div class="strategy-card">
+        <div class="strategy-name">TokenBucket</div>
+        <div class="strategy-desc">Tokens refill at a constant rate. Ideal for steady throughput with controlled burst capacity.</div>
+        <div class="window-viz">
+          <div class="window-bar" style="height:100%;background:var(--warn)"><div class="bar-label">10</div></div>
+          <div class="window-bar" style="height:70%;background:var(--warn)"><div class="bar-label">7</div></div>
+          <div class="window-bar" style="height:40%;background:var(--warn)"><div class="bar-label">4</div></div>
+          <div class="window-bar" style="height:60%;background:var(--warn)"><div class="bar-label">6</div></div>
+          <div class="window-bar" style="height:90%;background:var(--warn)"><div class="bar-label">9</div></div>
+        </div>
+        <p style="font-size:11px;color:var(--text3);margin:0;font-family:var(--mono)">Bucket: 10 | Refill: 2/10s</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 2: RateLimitConfig -->
+  <section id="config-model">
+    <h2>The RateLimitConfig Model</h2>
+    <p>Rate limiting is configured per-route via a JSON string stored in the <code>RateLimitConfig</code> column of the <code>GatewayRoute</code> table. The JSON is deserialized into this C# model:</p>
+
+    <pre><code><span class="kw">namespace</span> SmartGateway.Host.RateLimiting;
+
+<span class="kw">public class</span> <span class="fn">RateLimitConfig</span>
+{
+    <span class="kw">public string?</span> Policy { <span class="kw">get</span>; <span class="kw">set</span>; }              <span class="cm">// "FixedWindow", "SlidingWindow", "TokenBucket"</span>
+    <span class="kw">public int</span> PermitLimit { <span class="kw">get</span>; <span class="kw">set</span>; }              <span class="cm">// Max requests per window</span>
+    <span class="kw">public int</span> WindowSeconds { <span class="kw">get</span>; <span class="kw">set</span>; }            <span class="cm">// Window duration in seconds</span>
+    <span class="kw">public int</span> SegmentsPerWindow { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="num">4</span>;   <span class="cm">// SlidingWindow only</span>
+    <span class="kw">public int</span> TokenLimit { <span class="kw">get</span>; <span class="kw">set</span>; }              <span class="cm">// TokenBucket max tokens</span>
+    <span class="kw">public int</span> TokensPerPeriod { <span class="kw">get</span>; <span class="kw">set</span>; }          <span class="cm">// Tokens added each period</span>
+    <span class="kw">public int</span> ReplenishmentPeriodSeconds { <span class="kw">get</span>; <span class="kw">set</span>; } <span class="cm">// Refill interval</span>
+}</code></pre>
+
+    <table>
+      <thead>
+        <tr><th>Property</th><th>Used By</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>Policy</code></td><td>All</td><td>Algorithm name: <code>FixedWindow</code>, <code>SlidingWindow</code>, or <code>TokenBucket</code></td></tr>
+        <tr><td><code>PermitLimit</code></td><td>Fixed, Sliding</td><td>Maximum number of requests allowed per window</td></tr>
+        <tr><td><code>WindowSeconds</code></td><td>Fixed, Sliding</td><td>Duration of the rate limit window in seconds</td></tr>
+        <tr><td><code>SegmentsPerWindow</code></td><td>Sliding</td><td>Number of segments the window is divided into (default: 4)</td></tr>
+        <tr><td><code>TokenLimit</code></td><td>TokenBucket</td><td>Maximum number of tokens the bucket can hold</td></tr>
+        <tr><td><code>TokensPerPeriod</code></td><td>TokenBucket</td><td>Tokens added to the bucket each replenishment period</td></tr>
+        <tr><td><code>ReplenishmentPeriodSeconds</code></td><td>TokenBucket</td><td>How often tokens are added (in seconds)</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Section 3: Policy Builder -->
+  <section id="policy-builder">
+    <h2>How Policies Are Built</h2>
+    <p>The <code>RateLimitPolicyBuilder</code> uses a simple switch expression to create the correct <code>RateLimiter</code> instance based on the policy name:</p>
+
+    <pre><code><span class="kw">public static</span> RateLimiter? <span class="fn">Build</span>(RateLimitConfig? config)
+{
+    <span class="kw">if</span> (config?.Policy == <span class="kw">null</span>)
+        <span class="kw">return null</span>;
+
+    <span class="kw">return</span> config.Policy <span class="kw">switch</span>
+    {
+        <span class="str">"FixedWindow"</span> =&gt; <span class="kw">new</span> <span class="fn">FixedWindowRateLimiter</span>(<span class="kw">new</span> FixedWindowRateLimiterOptions
+        {
+            PermitLimit = config.PermitLimit,
+            Window = TimeSpan.<span class="fn">FromSeconds</span>(config.WindowSeconds),
+            QueueLimit = <span class="num">0</span>   <span class="cm">// No queuing -- reject immediately</span>
+        }),
+        <span class="str">"SlidingWindow"</span> =&gt; <span class="kw">new</span> <span class="fn">SlidingWindowRateLimiter</span>(<span class="kw">new</span> SlidingWindowRateLimiterOptions
+        {
+            PermitLimit = config.PermitLimit,
+            Window = TimeSpan.<span class="fn">FromSeconds</span>(config.WindowSeconds),
+            SegmentsPerWindow = config.SegmentsPerWindow,
+            QueueLimit = <span class="num">0</span>
+        }),
+        <span class="str">"TokenBucket"</span> =&gt; <span class="kw">new</span> <span class="fn">TokenBucketRateLimiter</span>(<span class="kw">new</span> TokenBucketRateLimiterOptions
+        {
+            TokenLimit = config.TokenLimit,
+            ReplenishmentPeriod = TimeSpan.<span class="fn">FromSeconds</span>(config.ReplenishmentPeriodSeconds),
+            TokensPerPeriod = config.TokensPerPeriod,
+            QueueLimit = <span class="num">0</span>
+        }),
+        _ =&gt; <span class="kw">null</span>
+    };
+}</code></pre>
+
+    <div class="info-box">
+      <strong>QueueLimit = 0:</strong> All three strategies are configured with zero queuing. When the limit is exceeded, the request is rejected immediately with <code>429</code> rather than being queued. This prevents cascading latency in a gateway context.
+    </div>
+  </section>
+
+  <!-- Section 4: Configuring via JSON -->
+  <section id="json-config">
+    <h2>Configuration Examples</h2>
+    <p>The <code>RateLimitConfig</code> JSON is stored directly in the <code>GatewayRoute.RateLimitConfig</code> column. Here are examples for each strategy:</p>
+
+    <h3>FixedWindow: 100 requests per minute</h3>
+    <pre><code>{
+  <span class="str">"Policy"</span>: <span class="str">"FixedWindow"</span>,
+  <span class="str">"PermitLimit"</span>: <span class="num">100</span>,
+  <span class="str">"WindowSeconds"</span>: <span class="num">60</span>
+}</code></pre>
+    <p>Every 60 seconds the counter resets to zero. If a client sends 100 requests in the first 5 seconds, they are blocked for the remaining 55 seconds.</p>
+
+    <h3>SlidingWindow: 200 requests per minute, 4 segments</h3>
+    <pre><code>{
+  <span class="str">"Policy"</span>: <span class="str">"SlidingWindow"</span>,
+  <span class="str">"PermitLimit"</span>: <span class="num">200</span>,
+  <span class="str">"WindowSeconds"</span>: <span class="num">60</span>,
+  <span class="str">"SegmentsPerWindow"</span>: <span class="num">4</span>
+}</code></pre>
+    <p>The 60-second window is divided into 4 segments of 15 seconds each. As each segment expires, its count is subtracted. This prevents the boundary burst problem of fixed windows.</p>
+
+    <h3>TokenBucket: 10 tokens max, refill 2 every 10 seconds</h3>
+    <pre><code>{
+  <span class="str">"Policy"</span>: <span class="str">"TokenBucket"</span>,
+  <span class="str">"TokenLimit"</span>: <span class="num">10</span>,
+  <span class="str">"TokensPerPeriod"</span>: <span class="num">2</span>,
+  <span class="str">"ReplenishmentPeriodSeconds"</span>: <span class="num">10</span>
+}</code></pre>
+    <p>The bucket starts full (10 tokens). Each request consumes 1 token. Every 10 seconds, 2 tokens are added back up to the maximum of 10. This provides a steady average rate of 12 requests/minute with burst capacity.</p>
+  </section>
+
+  <!-- Section 5: Configuring via API -->
+  <section id="api-config">
+    <h2>Configuration via REST API</h2>
+    <p>Set rate limiting when creating or updating a route through the SmartGateway API:</p>
+
+    <h3>Create a rate-limited route</h3>
+    <pre><code>curl -X POST http://localhost:5100/api/routes \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "routeId": "public-api",
+    "clusterId": "api-cluster",
+    "pathPattern": "/api/public/{**catch-all}",
+    "methods": "GET",
+    "rateLimitConfig": "{\"Policy\":\"SlidingWindow\",\"PermitLimit\":200,\"WindowSeconds\":60,\"SegmentsPerWindow\":4}"
+  }'</span></code></pre>
+
+    <div class="info-box warn">
+      <strong>Note:</strong> The <code>rateLimitConfig</code> value is a JSON string within JSON. The inner JSON must be escaped when sent as part of the route payload.
+    </div>
+
+    <h3>Update rate limits on an existing route</h3>
+    <pre><code>curl -X PUT http://localhost:5100/api/routes/public-api \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "rateLimitConfig": "{\"Policy\":\"TokenBucket\",\"TokenLimit\":20,\"TokensPerPeriod\":5,\"ReplenishmentPeriodSeconds\":10}"
+  }'</span></code></pre>
+
+    <h3>Remove rate limiting from a route</h3>
+    <pre><code>curl -X PUT http://localhost:5100/api/routes/public-api \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"rateLimitConfig": null}'</span></code></pre>
+  </section>
+
+  <!-- Section 6: How Routes Store Config -->
+  <section id="storage">
+    <h2>How Rate Limit Config Is Stored</h2>
+    <p>Rate limiting configuration lives on the <code>GatewayRoute</code> entity as a nullable JSON string:</p>
+
+    <pre><code><span class="kw">public class</span> <span class="fn">GatewayRoute</span>
+{
+    <span class="kw">public string</span> RouteId { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public string</span> ClusterId { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public string?</span> PathPattern { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="cm">// ...other fields...</span>
+    <span class="kw">public string?</span> RateLimitConfig { <span class="kw">get</span>; <span class="kw">set</span>; }  <span class="cm">// JSON blob, null = no limit</span>
+}</code></pre>
+
+    <p>In the database, this column stores the raw JSON text:</p>
+    <pre><code><span class="cm">-- Example data in the Routes table</span>
+<span class="kw">SELECT</span> RouteId, RateLimitConfig
+<span class="kw">FROM</span> Routes
+<span class="kw">WHERE</span> RateLimitConfig <span class="kw">IS NOT NULL</span>;
+
+<span class="cm">-- RouteId       | RateLimitConfig</span>
+<span class="cm">-- public-api    | {"Policy":"SlidingWindow","PermitLimit":200,...}</span>
+<span class="cm">-- webhook-in    | {"Policy":"TokenBucket","TokenLimit":10,...}</span></code></pre>
+  </section>
+
+  <!-- Section 7: 429 Response -->
+  <section id="429-response">
+    <h2>The 429 Too Many Requests Response</h2>
+    <p>When a request exceeds the rate limit, SmartGateway returns a <code>429</code> status code. Here is what the client sees:</p>
+
+    <pre><code><span class="cm"># Exceeding the rate limit</span>
+curl -v http://localhost:5000/api/public/data
+
+<span class="cm"># HTTP/1.1 429 Too Many Requests</span>
+<span class="cm"># Content-Length: 0</span>
+<span class="cm"># Retry-After: 30</span>
+<span class="cm"># Date: Sat, 05 Apr 2026 12:00:45 GMT</span></code></pre>
+
+    <div class="flow">
+      <div class="flow-step">Client sends<br>request #101</div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-step highlight">Rate limiter<br>checks quota</div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-step danger">Limit exceeded<br>QueueLimit=0</div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-step danger">429 Too Many<br>Requests</div>
+    </div>
+
+    <p>Key behaviors when a request is rejected:</p>
+    <ul>
+      <li>The request is <strong>never forwarded</strong> to the upstream cluster.</li>
+      <li>A <code>Retry-After</code> header may be included indicating when the client can retry.</li>
+      <li>The response body is empty -- the status code carries the meaning.</li>
+      <li>Because <code>QueueLimit = 0</code>, rejection is instant with no added latency.</li>
+    </ul>
+  </section>
+
+  <!-- Section 8: Global vs Per-Route -->
+  <section id="global-vs-per-route">
+    <h2>Global vs. Per-Route Limiting</h2>
+
+    <div class="card">
+      <div class="card-title">Per-Route Limiting (default approach)</div>
+      <p>Each route has its own <code>RateLimitConfig</code> JSON. This means different routes can have different limits. An internal admin API might allow 1000 req/min while a public search endpoint allows 50 req/min.</p>
+      <pre><code><span class="cm">// Route: internal-api   -->  1000 req/min FixedWindow</span>
+<span class="cm">// Route: public-search  -->  50 req/min SlidingWindow</span>
+<span class="cm">// Route: webhook-in     -->  TokenBucket 10 tokens</span>
+<span class="cm">// Route: docs-static    -->  no rate limit (null)</span></code></pre>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Global Limiting (middleware approach)</div>
+      <p>For a gateway-wide rate limit, you can configure ASP.NET Core's built-in rate limiting middleware in <code>Program.cs</code>. This acts as a first layer before per-route policies are evaluated.</p>
+      <pre><code><span class="cm">// In Program.cs (SmartGateway.Host)</span>
+builder.Services.<span class="fn">AddRateLimiter</span>(options =&gt;
+{
+    options.<span class="fn">AddFixedWindowLimiter</span>(<span class="str">"global"</span>, opt =&gt;
+    {
+        opt.PermitLimit = <span class="num">5000</span>;
+        opt.Window = TimeSpan.<span class="fn">FromMinutes</span>(<span class="num">1</span>);
+        opt.QueueLimit = <span class="num">0</span>;
+    });
+    options.RejectionStatusCode = <span class="num">429</span>;
+});
+
+<span class="cm">// In the middleware pipeline</span>
+app.<span class="fn">UseRateLimiter</span>();</code></pre>
+    </div>
+
+    <table>
+      <thead>
+        <tr><th>Aspect</th><th>Global</th><th>Per-Route</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Scope</td><td>All requests to the gateway</td><td>Specific route only</td></tr>
+        <tr><td>Configuration</td><td><code>Program.cs</code> middleware</td><td><code>RateLimitConfig</code> JSON in DB</td></tr>
+        <tr><td>Hot-reload</td><td>Requires restart</td><td>Applied on next config reload</td></tr>
+        <tr><td>Granularity</td><td>One limit for everything</td><td>Different limits per route</td></tr>
+        <tr><td>Use case</td><td>DDoS protection ceiling</td><td>Business-logic rate limits</td></tr>
+      </tbody>
+    </table>
+
+    <div class="info-box">
+      <strong>Layered approach:</strong> In production, use both. Set a high global limit (e.g., 5000 req/min) as a safety net, then fine-tune individual route limits based on your upstream service capacity.
+    </div>
+  </section>
+
+  <!-- Section 9: Choosing a Strategy -->
+  <section id="choosing">
+    <h2>Choosing the Right Strategy</h2>
+
+    <div class="card">
+      <div class="card-title">Use FixedWindow when...</div>
+      <ul style="margin-bottom:0">
+        <li>Simplicity matters more than precision</li>
+        <li>Upstream services have hard per-minute quotas</li>
+        <li>You are fine with potential bursts at window boundaries</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Use SlidingWindow when...</div>
+      <ul style="margin-bottom:0">
+        <li>You need smoother rate enforcement without boundary spikes</li>
+        <li>APIs serve end-user traffic where fairness matters</li>
+        <li>You want the best balance of accuracy and simplicity</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Use TokenBucket when...</div>
+      <ul style="margin-bottom:0">
+        <li>You want to allow controlled bursts (e.g., batch uploads)</li>
+        <li>Upstream services prefer a steady average rate with burst tolerance</li>
+        <li>You need fine-grained control over refill rate and burst capacity</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Section 10: Complete Example -->
+  <section id="example">
+    <h2>Complete Working Example</h2>
+    <p>Let's set up a sliding window rate limit on a public search endpoint and verify it works:</p>
+
+    <div class="steps">
+      <div class="step">
+        <h3>Create the route with rate limiting</h3>
+        <pre><code>curl -X POST http://localhost:5100/api/routes \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "routeId": "search-api",
+    "clusterId": "search-cluster",
+    "pathPattern": "/api/search/{**catch-all}",
+    "methods": "GET",
+    "rateLimitConfig": "{\"Policy\":\"SlidingWindow\",\"PermitLimit\":5,\"WindowSeconds\":60,\"SegmentsPerWindow\":4}"
+  }'</span></code></pre>
+      </div>
+
+      <div class="step">
+        <h3>Send requests up to the limit</h3>
+        <pre><code><span class="cm"># Requests 1-5: all succeed with 200 OK</span>
+<span class="kw">for</span> i <span class="kw">in</span> <span class="num">1 2 3 4 5</span>; <span class="kw">do</span>
+  echo <span class="str">"Request $i:"</span> $(curl -s -o /dev/null -w <span class="str">"%{http_code}"</span> \
+    http://localhost:5000/api/search?q=test)
+<span class="kw">done</span>
+
+<span class="cm"># Output:</span>
+<span class="cm"># Request 1: 200</span>
+<span class="cm"># Request 2: 200</span>
+<span class="cm"># Request 3: 200</span>
+<span class="cm"># Request 4: 200</span>
+<span class="cm"># Request 5: 200</span></code></pre>
+      </div>
+
+      <div class="step">
+        <h3>Exceed the limit</h3>
+        <pre><code><span class="cm"># Request 6: rate limit exceeded</span>
+curl -v http://localhost:5000/api/search?q=test
+
+<span class="cm"># &lt; HTTP/1.1 429 Too Many Requests</span>
+<span class="cm"># &lt; Content-Length: 0</span>
+<span class="cm"># &lt; Retry-After: 15</span></code></pre>
+      </div>
+
+      <div class="step">
+        <h3>Wait for window segment to expire</h3>
+        <p>With 4 segments in a 60-second window, each segment is 15 seconds. After 15 seconds, the oldest segment's count is removed and new requests are allowed.</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  SmartGateway Documentation &mdash; API Gateway built on YARP
+</footer>
+
+</body>
+</html>

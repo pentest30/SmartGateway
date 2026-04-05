@@ -1,0 +1,119 @@
+@page "/canary"
+@using Microsoft.EntityFrameworkCore
+@using SmartGateway.Core.Data
+@using SmartGateway.Core.Entities
+@inject IDbContextFactory<SmartGatewayDbContext> DbFactory
+@rendermode InteractiveServer
+
+<PageTitle>Canary Deployments - SmartGateway</PageTitle>
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Canary Deployments</div>
+        <div class="page-sub">Adjust destination weights for gradual traffic rollout</div>
+    </div>
+</div>
+
+@if (_clusters == null)
+{
+    <div class="card"><div style="color:var(--text3)">Loading...</div></div>
+}
+else
+{
+    @foreach (var cluster in _clusters.Where(c => c.Destinations.Count > 0))
+    {
+        <div class="card" style="margin-bottom:16px">
+            <div class="card-header">
+                <div>
+                    <div class="card-title">@cluster.ClusterId</div>
+                    <div class="card-sub">@cluster.LoadBalancing · @cluster.Destinations.Count destination(s)</div>
+                </div>
+                <span class="badge badge-green"><span class="badge-dot"></span>@(cluster.IsActive ? "active" : "inactive")</span>
+            </div>
+
+            @{ var totalWeight = cluster.Destinations.Sum(d => d.Weight); }
+
+            @foreach (var dest in cluster.Destinations)
+            {
+                var pct = totalWeight > 0 ? (double)dest.Weight / totalWeight * 100 : 0;
+                <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+                    <div class="dest-indicator" style="background:@(dest.IsHealthy ? "var(--success)" : "var(--danger)")"></div>
+                    <div style="width:140px">
+                        <div style="font-size:12px;font-weight:600;color:var(--text)">@dest.DestinationId</div>
+                        <div style="font-family:var(--mono);font-size:10px;color:var(--text3)">@dest.Address</div>
+                    </div>
+
+                    <div style="flex:1;display:flex;align-items:center;gap:8px">
+                        @{var capturedId = dest.Id;}
+                        <input type="range" min="0" max="100" value="@dest.Weight"
+                               @onchange="(e) => OnWeightChange(capturedId, e)"
+                               style="flex:1;accent-color:var(--accent);cursor:pointer;height:6px" />
+                    </div>
+
+                    <div style="width:60px;text-align:right">
+                        <span style="font-family:var(--mono);font-size:14px;font-weight:600;color:var(--text)">@dest.Weight</span>
+                    </div>
+                    <div style="width:50px;text-align:right">
+                        <span style="font-family:var(--mono);font-size:11px;color:var(--text3)">@pct.ToString("F0")%</span>
+                    </div>
+
+                    @if (dest.IsHealthy)
+                    {
+                        <span class="badge badge-green" style="font-size:10px">active</span>
+                    }
+                    else
+                    {
+                        <span class="badge badge-red" style="font-size:10px">evicted</span>
+                    }
+                </div>
+            }
+
+            <div style="margin-top:12px;display:flex;align-items:center;gap:8px">
+                <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;display:flex">
+                    @foreach (var dest in cluster.Destinations)
+                    {
+                        var pctBar = totalWeight > 0 ? (double)dest.Weight / totalWeight * 100 : 0;
+                        var color = dest.IsHealthy ? "var(--accent)" : "var(--danger)";
+                        <div style="width:@(pctBar)%;background:@color;opacity:0.8"></div>
+                    }
+                </div>
+                <span style="font-family:var(--mono);font-size:10px;color:var(--text3)">total: @totalWeight</span>
+            </div>
+        </div>
+    }
+
+    @if (!_clusters.Any(c => c.Destinations.Count > 0))
+    {
+        <div class="card"><div class="empty-state"><div class="empty-title">No clusters with destinations</div><div class="empty-desc">Add destinations to clusters to manage traffic weights.</div></div></div>
+    }
+}
+
+@code {
+    private List<GatewayCluster>? _clusters;
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        using var ctx = await DbFactory.CreateDbContextAsync();
+        _clusters = await ctx.Clusters.AsNoTracking().Include(c => c.Destinations).OrderBy(c => c.ClusterId).ToListAsync();
+    }
+
+    private async Task OnWeightChange(int destId, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var w))
+            await UpdateWeight(destId, w);
+    }
+
+    private async Task UpdateWeight(int destId, int newWeight)
+    {
+        using var ctx = await DbFactory.CreateDbContextAsync();
+        var dest = await ctx.Destinations.FindAsync(destId);
+        if (dest != null)
+        {
+            dest.Weight = Math.Max(0, Math.Min(100, newWeight));
+            await ctx.SaveChangesAsync();
+        }
+        await Load();
+    }
+}

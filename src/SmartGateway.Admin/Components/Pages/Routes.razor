@@ -1,0 +1,188 @@
+@page "/routes"
+@using Microsoft.EntityFrameworkCore
+@using SmartGateway.Core.Data
+@using SmartGateway.Core.Entities
+@inject IDbContextFactory<SmartGatewayDbContext> DbFactory
+@rendermode InteractiveServer
+
+<PageTitle>Routes - SmartGateway</PageTitle>
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Routes</div>
+        <div class="page-sub">Path, host, and header matching rules</div>
+    </div>
+    <div style="margin-left:auto">
+        <button class="btn btn-primary" @onclick="() => _showModal = true">+ New Route</button>
+    </div>
+</div>
+
+<div class="section-full">
+    <div class="section-head">
+        <div class="card-title">All routes</div>
+        <span class="badge badge-gray">@(_routes?.Count ?? 0) total</span>
+    </div>
+    @if (_routes == null)
+    {
+        <div style="padding:24px;color:var(--text3)">Loading...</div>
+    }
+    else if (_routes.Count == 0)
+    {
+        <div class="empty-state">
+            <div class="empty-title">No routes configured</div>
+            <div class="empty-desc">Add a route to start proxying traffic through the gateway.</div>
+        </div>
+    }
+    else
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Route ID</th>
+                    <th>Path pattern</th>
+                    <th>Cluster</th>
+                    <th>Priority</th>
+                    <th>Auth</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var route in _routes)
+                {
+                    <tr>
+                        <td><span class="tag">@route.RouteId</span></td>
+                        <td><span style="font-family:var(--mono);font-size:12px;color:var(--text)">@route.PathPattern</span></td>
+                        <td>@route.ClusterId</td>
+                        <td><span style="font-family:var(--mono);color:var(--text3)">@route.Priority</span></td>
+                        <td>
+                            @if (route.RequiresAuth)
+                            {
+                                <span class="badge badge-blue">@(route.AuthPolicyName ?? "JWT")</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-gray">none</span>
+                            }
+                        </td>
+                        <td>
+                            @if (route.IsActive)
+                            {
+                                <span class="badge badge-green"><span class="badge-dot"></span>active</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-red"><span class="badge-dot"></span>inactive</span>
+                            }
+                        </td>
+                        <td>
+                            <button class="btn btn-danger btn-sm" @onclick="() => DeleteRoute(route.RouteId)">Delete</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@if (_showModal)
+{
+    <div class="modal-overlay open" @onclick="OnOverlayClick">
+        <div class="modal" @onclick:stopPropagation="true">
+            <div class="modal-title">New Route</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <div class="form-label">Route ID</div>
+                    <input @bind="_newRouteId" class="form-input" placeholder="e.g. payments-api" />
+                </div>
+                <div class="form-group">
+                    <div class="form-label">Cluster</div>
+                    <select @bind="_newClusterId" class="form-select">
+                        @foreach (var c in _clusterIds)
+                        {
+                            <option value="@c">@c</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom:12px">
+                <div class="form-label">Path pattern</div>
+                <input @bind="_newPath" class="form-input" placeholder="/api/payments/{**catch-all}" />
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <div class="form-label">Methods</div>
+                    <input @bind="_newMethods" class="form-input" placeholder="GET,POST,PUT" />
+                </div>
+                <div class="form-group">
+                    <div class="form-label">Priority</div>
+                    <input @bind="_newPriority" type="number" class="form-input" placeholder="0" />
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <div class="form-label">Match header (optional)</div>
+                    <input @bind="_newMatchHeader" class="form-input" placeholder="X-Tenant-Id" />
+                </div>
+                <div class="form-group">
+                    <div class="form-label">Header value</div>
+                    <input @bind="_newMatchHeaderValue" class="form-input" placeholder="tenant-a" />
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" @onclick="() => _showModal = false">Cancel</button>
+                <button class="btn btn-primary" @onclick="AddRoute">Create route</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<GatewayRoute>? _routes;
+    private List<string> _clusterIds = new();
+    private bool _showModal;
+    private string _newRouteId = "", _newClusterId = "", _newPath = "";
+    private string _newMethods = "", _newMatchHeader = "", _newMatchHeaderValue = "";
+    private int _newPriority = 0;
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    private void OnOverlayClick() => _showModal = false;
+
+    private async Task LoadData()
+    {
+        using var context = await DbFactory.CreateDbContextAsync();
+        _routes = await context.Routes.AsNoTracking().OrderBy(r => r.Priority).ThenBy(r => r.RouteId).ToListAsync();
+        _clusterIds = await context.Clusters.AsNoTracking().Select(c => c.ClusterId).OrderBy(c => c).ToListAsync();
+        if (_clusterIds.Count > 0 && string.IsNullOrEmpty(_newClusterId)) _newClusterId = _clusterIds[0];
+    }
+
+    private async Task AddRoute()
+    {
+        if (string.IsNullOrWhiteSpace(_newRouteId) || string.IsNullOrWhiteSpace(_newClusterId)) return;
+        using var context = await DbFactory.CreateDbContextAsync();
+        context.Routes.Add(new GatewayRoute
+        {
+            RouteId = _newRouteId.Trim(),
+            ClusterId = _newClusterId,
+            PathPattern = _newPath.Trim(),
+            Methods = string.IsNullOrWhiteSpace(_newMethods) ? null : _newMethods.Trim(),
+            Priority = _newPriority,
+            MatchHeader = string.IsNullOrWhiteSpace(_newMatchHeader) ? null : _newMatchHeader.Trim(),
+            MatchHeaderValue = string.IsNullOrWhiteSpace(_newMatchHeaderValue) ? null : _newMatchHeaderValue.Trim()
+        });
+        await context.SaveChangesAsync();
+        _newRouteId = ""; _newPath = ""; _newMethods = ""; _newPriority = 0;
+        _newMatchHeader = ""; _newMatchHeaderValue = "";
+        _showModal = false;
+        await LoadData();
+    }
+
+    private async Task DeleteRoute(string id)
+    {
+        using var context = await DbFactory.CreateDbContextAsync();
+        var r = await context.Routes.FindAsync(id);
+        if (r != null) { context.Routes.Remove(r); await context.SaveChangesAsync(); }
+        await LoadData();
+    }
+}

@@ -1,0 +1,135 @@
+@page "/resilience"
+@using Microsoft.EntityFrameworkCore
+@using SmartGateway.Core.Data
+@using SmartGateway.Core.Entities
+@inject IDbContextFactory<SmartGatewayDbContext> DbFactory
+@rendermode InteractiveServer
+
+<PageTitle>Resilience - SmartGateway</PageTitle>
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Resilience</div>
+        <div class="page-sub">Polly v8 circuit breakers, retries, and timeouts per cluster</div>
+    </div>
+    <div style="margin-left:auto">
+        <button class="btn btn-primary" @onclick="() => _showModal = true">+ Configure Policy</button>
+    </div>
+</div>
+
+<div class="section-full">
+    <div class="section-head"><div class="card-title">Circuit breaker state</div><span class="badge badge-gray">@(_policies?.Count ?? 0) policies</span></div>
+    @if (_policies == null)
+    {
+        <div style="padding:24px;color:var(--text3)">Loading...</div>
+    }
+    else if (_policies.Count == 0)
+    {
+        <div class="empty-state"><div class="empty-title">No resilience policies</div><div class="empty-desc">Configure retry, circuit breaker, and timeout per cluster.</div></div>
+    }
+    else
+    {
+        <table class="table">
+            <thead><tr><th>Cluster</th><th>Circuit</th><th>Failure ratio</th><th>Break duration</th><th>Max retries</th><th>Backoff</th><th>Timeout</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var p in _policies)
+                {
+                    <tr>
+                        <td><span class="tag">@p.ClusterId</span></td>
+                        <td>
+                            @if (p.CircuitEnabled)
+                            {
+                                <span style="color:var(--success);font-family:var(--mono);font-size:11px">● closed</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-gray">disabled</span>
+                            }
+                        </td>
+                        <td><span style="font-family:var(--mono);font-size:12px">@p.CircuitFailureRatio.ToString("F2")</span></td>
+                        <td><span style="font-family:var(--mono);font-size:12px;color:var(--text3)">@(p.CircuitBreakMs / 1000)s</span></td>
+                        <td><span style="font-family:var(--mono);font-size:12px;color:var(--text3)">@(p.RetryMaxAttempts)x</span></td>
+                        <td><span style="font-family:var(--mono);font-size:12px;color:var(--text3)">@p.RetryBackoffType</span></td>
+                        <td><span style="font-family:var(--mono);font-size:12px;color:var(--text3)">@(p.TimeoutMs / 1000)s</span></td>
+                        <td><button class="btn btn-danger btn-sm" @onclick="() => Delete(p.ClusterId)">Delete</button></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@if (_showModal)
+{
+    <div class="modal-overlay open" @onclick="() => _showModal = false">
+        <div class="modal" @onclick:stopPropagation="true">
+            <div class="modal-title">Configure Resilience Policy</div>
+            <div class="form-row">
+                <div class="form-group"><div class="form-label">Cluster</div>
+                    <select @bind="_newClusterId" class="form-select">
+                        @foreach (var c in _clusterIds) { <option value="@c">@c</option> }
+                    </select>
+                </div>
+                <div class="form-group"><div class="form-label">Retry max attempts</div><input @bind="_retryMax" type="number" class="form-input" /></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><div class="form-label">Backoff type</div>
+                    <select @bind="_backoff" class="form-select"><option>Exponential</option><option>Linear</option></select>
+                </div>
+                <div class="form-group"><div class="form-label">Retry delay (ms)</div><input @bind="_retryDelay" type="number" class="form-input" /></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><div class="form-label">Circuit break (ms)</div><input @bind="_breakMs" type="number" class="form-input" /></div>
+                <div class="form-group"><div class="form-label">Timeout (ms)</div><input @bind="_timeoutMs" type="number" class="form-input" /></div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" @onclick="() => _showModal = false">Cancel</button>
+                <button class="btn btn-primary" @onclick="Add">Save policy</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<GatewayResiliencePolicy>? _policies;
+    private List<string> _clusterIds = new();
+    private bool _showModal;
+    private string _newClusterId = "";
+    private int _retryMax = 3, _retryDelay = 200, _breakMs = 30000, _timeoutMs = 10000;
+    private string _backoff = "Exponential";
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        using var ctx = await DbFactory.CreateDbContextAsync();
+        _policies = await ctx.ResiliencePolicies.AsNoTracking().OrderBy(p => p.ClusterId).ToListAsync();
+        _clusterIds = await ctx.Clusters.AsNoTracking().Select(c => c.ClusterId).OrderBy(c => c).ToListAsync();
+        if (_clusterIds.Count > 0 && string.IsNullOrEmpty(_newClusterId)) _newClusterId = _clusterIds[0];
+    }
+
+    private async Task Add()
+    {
+        if (string.IsNullOrWhiteSpace(_newClusterId)) return;
+        using var ctx = await DbFactory.CreateDbContextAsync();
+        var existing = await ctx.ResiliencePolicies.FindAsync(_newClusterId);
+        if (existing != null) { ctx.ResiliencePolicies.Remove(existing); }
+        ctx.ResiliencePolicies.Add(new GatewayResiliencePolicy
+        {
+            ClusterId = _newClusterId, RetryMaxAttempts = _retryMax,
+            RetryBackoffType = _backoff, RetryDelayMs = _retryDelay,
+            CircuitBreakMs = _breakMs, TimeoutMs = _timeoutMs
+        });
+        await ctx.SaveChangesAsync();
+        _showModal = false;
+        await Load();
+    }
+
+    private async Task Delete(string id)
+    {
+        using var ctx = await DbFactory.CreateDbContextAsync();
+        var p = await ctx.ResiliencePolicies.FindAsync(id);
+        if (p != null) { ctx.ResiliencePolicies.Remove(p); await ctx.SaveChangesAsync(); }
+        await Load();
+    }
+}

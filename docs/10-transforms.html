@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transforms - SmartGateway Documentation</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0d1720;--surface:#13202e;--surface2:#182a3a;--border:#1e3348;
+    --accent:#00d4aa;--accent2:#6c5ce7;--text:#e8edf2;--text2:#a4b3c4;--text3:#5e7a94;
+    --success:#00d4aa;--danger:#ff4757;--warn:#ffa502;
+    --font:'Syne',sans-serif;--mono:'JetBrains Mono',monospace;
+    --radius:10px;--radius-sm:6px;
+  }
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--text);font-family:var(--font);line-height:1.7;font-size:15px}
+  a{color:var(--accent);text-decoration:none;transition:opacity .2s}
+  a:hover{opacity:.8}
+
+  .navbar{position:sticky;top:0;z-index:100;background:rgba(13,23,32,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0 32px}
+  .nav-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;height:56px;gap:24px;overflow-x:auto}
+  .nav-brand{font-weight:800;font-size:17px;color:var(--accent);white-space:nowrap;letter-spacing:-.3px}
+  .nav-links{display:flex;gap:6px;flex:1;overflow-x:auto;scrollbar-width:none}
+  .nav-links::-webkit-scrollbar{display:none}
+  .nav-link{font-size:12.5px;padding:6px 11px;border-radius:var(--radius-sm);color:var(--text2);white-space:nowrap;transition:all .2s;font-weight:500}
+  .nav-link:hover{background:var(--surface);color:var(--text)}
+  .nav-link.active{background:rgba(0,212,170,.1);color:var(--accent)}
+
+  .container{max-width:920px;margin:0 auto;padding:48px 32px 80px}
+
+  .hero{margin-bottom:56px}
+  .hero-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin-bottom:10px}
+  .hero h1{font-size:40px;font-weight:800;line-height:1.15;letter-spacing:-.5px;margin-bottom:14px}
+  .hero p{font-size:17px;color:var(--text2);max-width:640px;line-height:1.7}
+
+  section{margin-bottom:56px}
+  h2{font-size:26px;font-weight:700;margin-bottom:18px;letter-spacing:-.3px;padding-top:8px;border-top:1px solid var(--border)}
+  h3{font-size:19px;font-weight:600;margin-bottom:12px;color:var(--text)}
+  h4{font-size:16px;font-weight:600;margin-bottom:10px;color:var(--accent)}
+  p,li{color:var(--text2);line-height:1.8}
+  p{margin-bottom:14px}
+  ul,ol{margin-left:20px;margin-bottom:16px}
+  li{margin-bottom:6px}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px}
+  .card-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px}
+
+  pre{background:#0a1018;border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;overflow-x:auto;margin-bottom:20px;line-height:1.65}
+  code{font-family:var(--mono);font-size:13px}
+  pre code{color:#c8d6e5}
+  :not(pre)>code{background:var(--surface2);padding:2px 7px;border-radius:4px;font-size:13px;color:var(--accent)}
+
+  .info-box{border-left:3px solid var(--accent);background:rgba(0,212,170,.06);padding:16px 20px;border-radius:0 var(--radius) var(--radius) 0;margin-bottom:20px}
+  .info-box.warn{border-left-color:var(--warn);background:rgba(255,165,2,.06)}
+  .info-box.danger{border-left-color:var(--danger);background:rgba(255,71,87,.06)}
+  .info-box strong{color:var(--text);font-weight:600}
+
+  table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:14px}
+  th{text-align:left;font-weight:600;color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:1px;padding:10px 14px;border-bottom:1px solid var(--border)}
+  td{padding:12px 14px;border-bottom:1px solid var(--border);color:var(--text2)}
+  tr:hover td{background:rgba(0,212,170,.03)}
+
+  /* ── Transform flow diagram ── */
+  .transform-flow{display:flex;flex-direction:column;gap:0;margin-bottom:24px}
+  .tf-row{display:flex;align-items:stretch;gap:0}
+  .tf-phase{flex:1;padding:16px;border:1px solid var(--border);text-align:center}
+  .tf-phase:first-child{border-radius:var(--radius) 0 0 var(--radius)}
+  .tf-phase:last-child{border-radius:0 var(--radius) var(--radius) 0}
+  .tf-phase-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px}
+  .tf-phase-content{font-size:13px;font-family:var(--mono);color:var(--text2)}
+  .tf-phase.req{background:rgba(108,92,231,.06);border-color:rgba(108,92,231,.2)}
+  .tf-phase.req .tf-phase-label{color:var(--accent2)}
+  .tf-phase.gw{background:rgba(0,212,170,.06);border-color:rgba(0,212,170,.2)}
+  .tf-phase.gw .tf-phase-label{color:var(--accent)}
+  .tf-phase.up{background:rgba(255,165,2,.06);border-color:rgba(255,165,2,.2)}
+  .tf-phase.up .tf-phase-label{color:var(--warn)}
+  .tf-connector{text-align:center;padding:4px 0;color:var(--text3);font-size:16px}
+
+  /* ── Example cards grid ── */
+  .example-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:24px}
+  .example-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative}
+  .example-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--radius) var(--radius) 0 0}
+  .example-card:nth-child(1)::before{background:var(--accent)}
+  .example-card:nth-child(2)::before{background:var(--accent2)}
+  .example-card:nth-child(3)::before{background:var(--warn)}
+  .example-card:nth-child(4)::before{background:var(--danger)}
+  .example-name{font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px}
+  .example-desc{font-size:12px;color:var(--text3);margin-bottom:10px}
+
+  .badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px}
+  .badge-green{background:rgba(0,212,170,.12);color:var(--success)}
+  .badge-purple{background:rgba(108,92,231,.12);color:var(--accent2)}
+  .badge-warn{background:rgba(255,165,2,.12);color:var(--warn)}
+  .badge-red{background:rgba(255,71,87,.12);color:var(--danger)}
+
+  @media(max-width:768px){.example-grid{grid-template-columns:1fr}}
+
+  footer{border-top:1px solid var(--border);padding:32px;text-align:center;color:var(--text3);font-size:13px}
+  .kw{color:#c678dd} .str{color:#98c379} .cm{color:#5c6370;font-style:italic} .fn{color:#61afef} .num{color:#d19a66} .op{color:#56b6c2}
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-inner">
+    <div class="nav-brand">SmartGateway</div>
+    <div class="nav-links">
+      <a href="01-getting-started.html" class="nav-link">01 Getting Started</a>
+      <a href="02-architecture.html" class="nav-link">02 Architecture</a>
+      <a href="03-clusters.html" class="nav-link">03 Clusters</a>
+      <a href="04-routes.html" class="nav-link">04 Routes</a>
+      <a href="05-health-checks.html" class="nav-link">05 Health Checks</a>
+      <a href="06-resilience.html" class="nav-link">06 Resilience</a>
+      <a href="07-authentication.html" class="nav-link">07 Authentication</a>
+      <a href="08-rate-limiting.html" class="nav-link">08 Rate Limiting</a>
+      <a href="09-canary-deployments.html" class="nav-link">09 Canary</a>
+      <a href="10-transforms.html" class="nav-link active">10 Transforms</a>
+      <a href="11-admin-ui.html" class="nav-link">11 Admin UI</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="hero">
+    <div class="hero-label">Chapter 10</div>
+    <h1>Transforms</h1>
+    <p>SmartGateway transforms let you modify request headers, response headers, and URL paths as traffic flows through the gateway. Defined per-route in the database, transforms are applied by YARP's built-in transform pipeline with zero custom middleware.</p>
+  </div>
+
+  <!-- Section 1: Overview -->
+  <section id="overview">
+    <h2>How Transforms Work</h2>
+    <p>Transforms are modifications applied to HTTP requests and responses as they pass through the gateway. SmartGateway stores transforms in the <code>GatewayTransform</code> table and converts them into YARP transform dictionaries when loading configuration.</p>
+
+    <div class="transform-flow">
+      <div class="tf-row">
+        <div class="tf-phase req">
+          <div class="tf-phase-label">Client Request</div>
+          <div class="tf-phase-content">Original headers &amp; path</div>
+        </div>
+        <div class="tf-phase gw">
+          <div class="tf-phase-label">SmartGateway Transforms</div>
+          <div class="tf-phase-content">Set / Append / Remove headers<br>Strip path prefix</div>
+        </div>
+        <div class="tf-phase up">
+          <div class="tf-phase-label">Upstream</div>
+          <div class="tf-phase-content">Receives modified request</div>
+        </div>
+      </div>
+      <div class="tf-connector">&#8595; response flows back &#8595;</div>
+      <div class="tf-row">
+        <div class="tf-phase up">
+          <div class="tf-phase-label">Upstream Response</div>
+          <div class="tf-phase-content">Original response headers</div>
+        </div>
+        <div class="tf-phase gw">
+          <div class="tf-phase-label">Response Transforms</div>
+          <div class="tf-phase-content">Set / Remove response headers</div>
+        </div>
+        <div class="tf-phase req">
+          <div class="tf-phase-label">Client Receives</div>
+          <div class="tf-phase-content">Modified response</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 2: Entity Model -->
+  <section id="entity">
+    <h2>The GatewayTransform Entity</h2>
+    <p>Each transform is a row in the <code>Transforms</code> table, linked to a route via <code>RouteId</code>:</p>
+
+    <pre><code><span class="kw">namespace</span> SmartGateway.Core.Entities;
+
+<span class="kw">public class</span> <span class="fn">GatewayTransform</span>
+{
+    <span class="kw">public int</span> Id { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public string</span> RouteId { <span class="kw">get</span>; <span class="kw">set</span>; }     <span class="cm">// FK to GatewayRoute</span>
+    <span class="kw">public string</span> Type { <span class="kw">get</span>; <span class="kw">set</span>; }        <span class="cm">// "RequestHeader", "ResponseHeader", "PathPrefix"</span>
+    <span class="kw">public string</span> Key { <span class="kw">get</span>; <span class="kw">set</span>; }         <span class="cm">// Header name or transform key</span>
+    <span class="kw">public string?</span> Value { <span class="kw">get</span>; <span class="kw">set</span>; }      <span class="cm">// Header value, prefix, etc.</span>
+    <span class="kw">public string</span> Action { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="str">"Set"</span>;  <span class="cm">// "Set", "Append", "Remove"</span>
+
+    <span class="kw">public</span> GatewayRoute? Route { <span class="kw">get</span>; <span class="kw">set</span>; }
+}</code></pre>
+
+    <table>
+      <thead>
+        <tr><th>Column</th><th>Description</th><th>Examples</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>Type</code></td><td>The transform category</td><td><code>RequestHeader</code>, <code>ResponseHeader</code>, <code>PathPrefix</code></td></tr>
+        <tr><td><code>Key</code></td><td>Header name or transform identifier</td><td><code>X-Gateway-RequestId</code>, <code>Authorization</code>, <code>X-Forwarded-For</code></td></tr>
+        <tr><td><code>Value</code></td><td>Value to set/append, or prefix to strip</td><td><code>{request-id}</code>, <code>*</code>, <code>/api/v1</code></td></tr>
+        <tr><td><code>Action</code></td><td>Operation to perform</td><td><code>Set</code>, <code>Append</code>, <code>Remove</code></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Section 3: Transform Types -->
+  <section id="types">
+    <h2>Transform Types in Detail</h2>
+
+    <h3>1. Request Header Transforms</h3>
+    <p>Modify headers on the request before it reaches the upstream service.</p>
+
+    <div class="example-grid">
+      <div class="example-card">
+        <div class="example-name">Set <span class="badge badge-green">Set</span></div>
+        <div class="example-desc">Overwrites the header value, creating it if absent.</div>
+        <pre style="margin:0"><code>Type:   RequestHeader
+Key:    X-Gateway-RequestId
+Value:  {request-id}
+Action: Set</code></pre>
+      </div>
+      <div class="example-card">
+        <div class="example-name">Append <span class="badge badge-purple">Append</span></div>
+        <div class="example-desc">Adds a value to an existing header (multi-value).</div>
+        <pre style="margin:0"><code>Type:   RequestHeader
+Key:    X-Forwarded-For
+Value:  gateway-01
+Action: Append</code></pre>
+      </div>
+      <div class="example-card">
+        <div class="example-name">Remove <span class="badge badge-red">Remove</span></div>
+        <div class="example-desc">Strips the header entirely from the request.</div>
+        <pre style="margin:0"><code>Type:   RequestHeader
+Key:    Authorization
+Action: Remove</code></pre>
+      </div>
+      <div class="example-card">
+        <div class="example-name">Remove <span class="badge badge-red">Remove</span></div>
+        <div class="example-desc">Strip cookies from internal service calls.</div>
+        <pre style="margin:0"><code>Type:   RequestHeader
+Key:    Cookie
+Action: Remove</code></pre>
+      </div>
+    </div>
+
+    <h3>2. Response Header Transforms</h3>
+    <p>Modify headers on the response before it reaches the client.</p>
+
+    <div class="example-grid">
+      <div class="example-card">
+        <div class="example-name">Set CORS <span class="badge badge-green">Set</span></div>
+        <div class="example-desc">Add CORS headers for browser clients.</div>
+        <pre style="margin:0"><code>Type:   ResponseHeader
+Key:    Access-Control-Allow-Origin
+Value:  *
+Action: Set</code></pre>
+      </div>
+      <div class="example-card">
+        <div class="example-name">Remove Server <span class="badge badge-red">Remove</span></div>
+        <div class="example-desc">Hide upstream server identity.</div>
+        <pre style="margin:0"><code>Type:   ResponseHeader
+Key:    Server
+Action: Remove</code></pre>
+      </div>
+    </div>
+
+    <h3>3. Path Prefix Stripping</h3>
+    <p>Remove a prefix from the request path before forwarding. This is essential when the gateway route uses a prefix like <code>/api/v1/orders</code> but the upstream expects just <code>/orders</code>.</p>
+
+    <pre><code><span class="cm">// Transform definition</span>
+Type:   PathPrefix
+Key:    PathRemovePrefix    <span class="cm">// convention key</span>
+Value:  /api/v1             <span class="cm">// the prefix to strip</span>
+
+<span class="cm">// Effect:</span>
+<span class="cm">// Client requests:   GET /api/v1/orders/123</span>
+<span class="cm">// Upstream receives:  GET /orders/123</span></code></pre>
+  </section>
+
+  <!-- Section 4: How YARP Applies Transforms -->
+  <section id="yarp-internals">
+    <h2>How YARP AddTransforms Works</h2>
+    <p>SmartGateway's <code>DatabaseProxyConfigProvider</code> reads transforms from the database and converts them into YARP's transform dictionary format. Here is the conversion logic:</p>
+
+    <pre><code><span class="cm">// Inside DatabaseProxyConfigProvider.LoadFromDatabase()</span>
+
+<span class="kw">var</span> transforms = <span class="kw">new</span> List&lt;Dictionary&lt;<span class="kw">string</span>, <span class="kw">string</span>&gt;&gt;();
+
+<span class="kw">foreach</span> (<span class="kw">var</span> t <span class="kw">in</span> routeTransforms)
+{
+    <span class="kw">var</span> dict = <span class="kw">new</span> Dictionary&lt;<span class="kw">string</span>, <span class="kw">string</span>&gt;();
+
+    <span class="kw">switch</span> (t.Type)
+    {
+        <span class="kw">case</span> <span class="str">"RequestHeader"</span> <span class="kw">when</span> t.Action == <span class="str">"Set"</span>:
+            dict[<span class="str">"RequestHeader"</span>] = t.Key;
+            dict[<span class="str">"Set"</span>] = t.Value ?? <span class="str">""</span>;
+            <span class="kw">break</span>;
+
+        <span class="kw">case</span> <span class="str">"RequestHeader"</span> <span class="kw">when</span> t.Action == <span class="str">"Append"</span>:
+            dict[<span class="str">"RequestHeader"</span>] = t.Key;
+            dict[<span class="str">"Append"</span>] = t.Value ?? <span class="str">""</span>;
+            <span class="kw">break</span>;
+
+        <span class="kw">case</span> <span class="str">"RequestHeader"</span> <span class="kw">when</span> t.Action == <span class="str">"Remove"</span>:
+            dict[<span class="str">"RequestHeaderRemove"</span>] = t.Key;
+            <span class="kw">break</span>;
+
+        <span class="kw">case</span> <span class="str">"ResponseHeader"</span> <span class="kw">when</span> t.Action == <span class="str">"Set"</span>:
+            dict[<span class="str">"ResponseHeader"</span>] = t.Key;
+            dict[<span class="str">"Set"</span>] = t.Value ?? <span class="str">""</span>;
+            <span class="kw">break</span>;
+
+        <span class="kw">case</span> <span class="str">"ResponseHeader"</span> <span class="kw">when</span> t.Action == <span class="str">"Remove"</span>:
+            dict[<span class="str">"ResponseHeaderRemove"</span>] = t.Key;
+            <span class="kw">break</span>;
+
+        <span class="kw">case</span> <span class="str">"PathPrefix"</span>:
+            dict[<span class="str">"PathRemovePrefix"</span>] = t.Value ?? <span class="str">""</span>;
+            <span class="kw">break</span>;
+    }
+
+    <span class="kw">if</span> (dict.Count > <span class="num">0</span>)
+        transforms.<span class="fn">Add</span>(dict);
+}</code></pre>
+
+    <p>Each dictionary becomes one transform entry in the YARP <code>RouteConfig.Transforms</code> list. YARP processes them in order during the proxy pipeline.</p>
+
+    <div class="info-box">
+      <strong>YARP transform format:</strong> YARP uses dictionaries of string key-value pairs. Each dictionary represents one transform operation. The key names (<code>RequestHeader</code>, <code>Set</code>, <code>Append</code>, etc.) are defined by YARP's built-in transform system.
+    </div>
+  </section>
+
+  <!-- Section 5: Configuring via Database -->
+  <section id="database-config">
+    <h2>Configuring Transforms in the Database</h2>
+    <p>Transforms are stored as rows in the <code>Transforms</code> table. A single route can have multiple transforms. Here is what the data looks like for a well-configured route:</p>
+
+    <pre><code><span class="cm">-- Example: transforms for the "orders-api" route</span>
+
+<span class="kw">INSERT INTO</span> Transforms (RouteId, Type, [Key], Value, Action) <span class="kw">VALUES</span>
+  <span class="cm">-- Inject a unique request ID for tracing</span>
+  (<span class="str">'orders-api'</span>, <span class="str">'RequestHeader'</span>,  <span class="str">'X-Gateway-RequestId'</span>, <span class="str">'{request-id}'</span>, <span class="str">'Set'</span>),
+
+  <span class="cm">-- Strip the Authorization header (gateway already validated)</span>
+  (<span class="str">'orders-api'</span>, <span class="str">'RequestHeader'</span>,  <span class="str">'Authorization'</span>,       <span class="kw">NULL</span>,           <span class="str">'Remove'</span>),
+
+  <span class="cm">-- Add CORS headers on the response</span>
+  (<span class="str">'orders-api'</span>, <span class="str">'ResponseHeader'</span>, <span class="str">'Access-Control-Allow-Origin'</span>,  <span class="str">'*'</span>,  <span class="str">'Set'</span>),
+  (<span class="str">'orders-api'</span>, <span class="str">'ResponseHeader'</span>, <span class="str">'Access-Control-Allow-Methods'</span>, <span class="str">'GET,POST,PUT,DELETE'</span>, <span class="str">'Set'</span>),
+  (<span class="str">'orders-api'</span>, <span class="str">'ResponseHeader'</span>, <span class="str">'Access-Control-Allow-Headers'</span>, <span class="str">'Content-Type,X-Api-Key'</span>, <span class="str">'Set'</span>),
+
+  <span class="cm">-- Hide upstream server identity</span>
+  (<span class="str">'orders-api'</span>, <span class="str">'ResponseHeader'</span>, <span class="str">'Server'</span>,                       <span class="kw">NULL</span>,  <span class="str">'Remove'</span>),
+
+  <span class="cm">-- Strip /api/v1 prefix before forwarding</span>
+  (<span class="str">'orders-api'</span>, <span class="str">'PathPrefix'</span>,     <span class="str">'PathRemovePrefix'</span>,             <span class="str">'/api/v1'</span>, <span class="str">'Set'</span>);</code></pre>
+  </section>
+
+  <!-- Section 6: Practical Examples -->
+  <section id="examples">
+    <h2>Practical Examples</h2>
+
+    <h3>Example 1: Inject X-Gateway-RequestId for distributed tracing</h3>
+    <p>Add a unique request identifier to every proxied request so upstream services can correlate logs:</p>
+
+    <div class="card">
+      <table style="margin-bottom:0">
+        <tr><td style="width:100px"><strong>Type</strong></td><td><code>RequestHeader</code></td></tr>
+        <tr><td><strong>Key</strong></td><td><code>X-Gateway-RequestId</code></td></tr>
+        <tr><td><strong>Value</strong></td><td><code>gateway-{request-id}</code></td></tr>
+        <tr><td><strong>Action</strong></td><td><code>Set</code></td></tr>
+      </table>
+    </div>
+
+    <pre><code><span class="cm"># Client request (no X-Gateway-RequestId)</span>
+curl http://localhost:5000/api/orders
+
+<span class="cm"># What the upstream receives:</span>
+<span class="cm"># GET /api/orders HTTP/1.1</span>
+<span class="cm"># Host: 10.0.1.10:8080</span>
+<span class="cm"># X-Gateway-RequestId: gateway-3f2a9c8b-71e4-4d0f-...</span></code></pre>
+
+    <h3>Example 2: Strip Authorization header after gateway validation</h3>
+    <p>When the gateway handles API key auth, there is no need to forward credentials to upstream services. Remove the <code>Authorization</code> header to reduce the attack surface:</p>
+
+    <div class="card">
+      <table style="margin-bottom:0">
+        <tr><td style="width:100px"><strong>Type</strong></td><td><code>RequestHeader</code></td></tr>
+        <tr><td><strong>Key</strong></td><td><code>Authorization</code></td></tr>
+        <tr><td><strong>Value</strong></td><td><em>(null -- not needed for Remove)</em></td></tr>
+        <tr><td><strong>Action</strong></td><td><code>Remove</code></td></tr>
+      </table>
+    </div>
+
+    <pre><code><span class="cm"># Client request with auth</span>
+curl http://localhost:5000/api/orders \
+  -H <span class="str">"Authorization: Bearer eyJhbGciOi..."</span>
+
+<span class="cm"># What the upstream receives:</span>
+<span class="cm"># GET /api/orders HTTP/1.1</span>
+<span class="cm"># Host: 10.0.1.10:8080</span>
+<span class="cm"># (Authorization header is gone)</span></code></pre>
+
+    <h3>Example 3: Add CORS headers for browser clients</h3>
+    <p>Instead of configuring CORS on every upstream service, handle it at the gateway level with response transforms:</p>
+
+    <pre><code><span class="cm">-- Three response header transforms for complete CORS</span>
+
+<span class="cm">-- 1. Allow all origins</span>
+Type: ResponseHeader, Key: Access-Control-Allow-Origin,  Value: *, Action: Set
+
+<span class="cm">-- 2. Allow common methods</span>
+Type: ResponseHeader, Key: Access-Control-Allow-Methods, Value: GET,POST,PUT,DELETE,OPTIONS, Action: Set
+
+<span class="cm">-- 3. Allow custom headers</span>
+Type: ResponseHeader, Key: Access-Control-Allow-Headers, Value: Content-Type,X-Api-Key,Authorization, Action: Set</code></pre>
+
+    <pre><code><span class="cm"># Client sees CORS headers in every response:</span>
+<span class="cm"># HTTP/1.1 200 OK</span>
+<span class="cm"># Access-Control-Allow-Origin: *</span>
+<span class="cm"># Access-Control-Allow-Methods: GET,POST,PUT,DELETE,OPTIONS</span>
+<span class="cm"># Access-Control-Allow-Headers: Content-Type,X-Api-Key,Authorization</span>
+<span class="cm"># Content-Type: application/json</span></code></pre>
+
+    <h3>Example 4: Path prefix stripping for API versioning</h3>
+    <p>The gateway serves <code>/api/v2/orders/*</code> but the upstream expects just <code>/orders/*</code>:</p>
+
+    <div class="card">
+      <table style="margin-bottom:0">
+        <tr><td style="width:100px"><strong>Type</strong></td><td><code>PathPrefix</code></td></tr>
+        <tr><td><strong>Key</strong></td><td><code>PathRemovePrefix</code></td></tr>
+        <tr><td><strong>Value</strong></td><td><code>/api/v2</code></td></tr>
+        <tr><td><strong>Action</strong></td><td><code>Set</code></td></tr>
+      </table>
+    </div>
+
+    <pre><code><span class="cm"># Client requests:    GET /api/v2/orders/123/items</span>
+<span class="cm"># Upstream receives:  GET /orders/123/items</span>
+
+<span class="cm"># Client requests:    POST /api/v2/orders</span>
+<span class="cm"># Upstream receives:  POST /orders</span></code></pre>
+
+    <div class="info-box">
+      <strong>Path matching:</strong> Make sure the route's <code>PathPattern</code> matches the full prefixed path (e.g., <code>/api/v2/orders/{**catch-all}</code>) while the PathPrefix transform strips the <code>/api/v2</code> portion.
+    </div>
+  </section>
+
+  <!-- Section 7: Transform Order -->
+  <section id="order">
+    <h2>Transform Execution Order</h2>
+    <p>Transforms are applied in the order they are loaded from the database. Within a single request, the order is:</p>
+
+    <ol>
+      <li><strong>Request header transforms</strong> are applied before the request is forwarded (Set, Append, Remove).</li>
+      <li><strong>Path prefix transforms</strong> modify the URL path before forwarding.</li>
+      <li>The request is forwarded to the upstream service.</li>
+      <li><strong>Response header transforms</strong> are applied to the upstream's response before returning to the client.</li>
+    </ol>
+
+    <div class="info-box warn">
+      <strong>Order matters for headers:</strong> If you both <code>Set</code> and <code>Append</code> the same header, the Set runs first (by database insertion order), then Append adds to it. Plan your transforms accordingly.
+    </div>
+  </section>
+
+  <!-- Section 8: Complete Route Setup -->
+  <section id="complete-example">
+    <h2>Complete Route with Transforms</h2>
+    <p>Here is a full example creating a route and its transforms for a well-secured API endpoint:</p>
+
+    <pre><code><span class="cm">-- 1. Create the route</span>
+<span class="kw">INSERT INTO</span> Routes (RouteId, ClusterId, PathPattern, Methods, RequiresAuth, IsActive)
+<span class="kw">VALUES</span> (<span class="str">'payments-v2'</span>, <span class="str">'payments-svc'</span>, <span class="str">'/api/v2/payments/{**catch-all}'</span>,
+        <span class="str">'GET,POST'</span>, <span class="num">1</span>, <span class="num">1</span>);
+
+<span class="cm">-- 2. Add transforms</span>
+<span class="kw">INSERT INTO</span> Transforms (RouteId, Type, [Key], Value, Action) <span class="kw">VALUES</span>
+  <span class="cm">-- Tracing: inject request ID</span>
+  (<span class="str">'payments-v2'</span>, <span class="str">'RequestHeader'</span>,  <span class="str">'X-Gateway-RequestId'</span>,            <span class="str">'{request-id}'</span>,               <span class="str">'Set'</span>),
+  <span class="cm">-- Tracing: inject gateway identity</span>
+  (<span class="str">'payments-v2'</span>, <span class="str">'RequestHeader'</span>,  <span class="str">'X-Forwarded-By'</span>,                 <span class="str">'smartgateway-01'</span>,             <span class="str">'Set'</span>),
+  <span class="cm">-- Security: strip auth header (already validated at gateway)</span>
+  (<span class="str">'payments-v2'</span>, <span class="str">'RequestHeader'</span>,  <span class="str">'Authorization'</span>,                  <span class="kw">NULL</span>,                          <span class="str">'Remove'</span>),
+  <span class="cm">-- Security: strip cookies</span>
+  (<span class="str">'payments-v2'</span>, <span class="str">'RequestHeader'</span>,  <span class="str">'Cookie'</span>,                          <span class="kw">NULL</span>,                          <span class="str">'Remove'</span>),
+  <span class="cm">-- CORS: allow browser access</span>
+  (<span class="str">'payments-v2'</span>, <span class="str">'ResponseHeader'</span>, <span class="str">'Access-Control-Allow-Origin'</span>,    <span class="str">'https://app.example.com'</span>,     <span class="str">'Set'</span>),
+  <span class="cm">-- Security: hide server identity</span>
+  (<span class="str">'payments-v2'</span>, <span class="str">'ResponseHeader'</span>, <span class="str">'Server'</span>,                          <span class="kw">NULL</span>,                          <span class="str">'Remove'</span>),
+  (<span class="str">'payments-v2'</span>, <span class="str">'ResponseHeader'</span>, <span class="str">'X-Powered-By'</span>,                   <span class="kw">NULL</span>,                          <span class="str">'Remove'</span>),
+  <span class="cm">-- Routing: strip the /api/v2 prefix</span>
+  (<span class="str">'payments-v2'</span>, <span class="str">'PathPrefix'</span>,     <span class="str">'PathRemovePrefix'</span>,               <span class="str">'/api/v2'</span>,                     <span class="str">'Set'</span>);</code></pre>
+
+    <p>With this configuration, a client request like:</p>
+    <pre><code>curl https://gateway.example.com/api/v2/payments/charge \
+  -H <span class="str">"Authorization: Bearer eyJ..."</span> \
+  -H <span class="str">"Cookie: session=abc123"</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"amount": 50.00}'</span></code></pre>
+
+    <p>Is transformed into this request to the upstream:</p>
+    <pre><code><span class="cm"># POST /payments/charge HTTP/1.1</span>
+<span class="cm"># Host: 10.0.1.50:8080</span>
+<span class="cm"># Content-Type: application/json</span>
+<span class="cm"># X-Gateway-RequestId: 3f2a9c8b-71e4-4d0f-...</span>
+<span class="cm"># X-Forwarded-By: smartgateway-01</span>
+<span class="cm"># (Authorization: stripped)</span>
+<span class="cm"># (Cookie: stripped)</span>
+<span class="cm"># (Path: /api/v2 prefix removed)</span></code></pre>
+
+    <p>And the response to the client includes:</p>
+    <pre><code><span class="cm"># HTTP/1.1 200 OK</span>
+<span class="cm"># Content-Type: application/json</span>
+<span class="cm"># Access-Control-Allow-Origin: https://app.example.com</span>
+<span class="cm"># (Server header: removed)</span>
+<span class="cm"># (X-Powered-By header: removed)</span></code></pre>
+  </section>
+
+  <!-- Section 9: Hot Reload -->
+  <section id="hot-reload">
+    <h2>Hot Reload of Transforms</h2>
+    <p>Like all gateway configuration, transforms are loaded from the database whenever <code>SignalReload()</code> is called on the <code>DatabaseProxyConfigProvider</code>. This means you can add, modify, or remove transforms without restarting the gateway.</p>
+
+    <pre><code><span class="cm">// Transforms are loaded as part of the normal config reload</span>
+<span class="kw">var</span> dbTransforms = context.Transforms
+    .<span class="fn">AsNoTracking</span>()
+    .<span class="fn">ToList</span>()
+    .<span class="fn">GroupBy</span>(t =&gt; t.RouteId)
+    .<span class="fn">ToDictionary</span>(g =&gt; g.Key, g =&gt; g.<span class="fn">ToList</span>());
+
+<span class="cm">// Each route's transforms are then converted to YARP format</span>
+<span class="cm">// and included in the RouteConfig.Transforms list</span></code></pre>
+
+    <div class="info-box">
+      <strong>No downtime:</strong> Adding a transform to the database and triggering a config reload applies it to all subsequent requests. In-flight requests are not affected -- they complete with the old configuration.
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  SmartGateway Documentation &mdash; API Gateway built on YARP
+</footer>
+
+</body>
+</html>

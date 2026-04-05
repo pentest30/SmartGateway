@@ -1,0 +1,98 @@
+@page "/audit"
+@using Microsoft.EntityFrameworkCore
+@using SmartGateway.Core.Data
+@using SmartGateway.Core.Entities
+@inject IDbContextFactory<SmartGatewayDbContext> DbFactory
+@rendermode InteractiveServer
+
+<PageTitle>Audit Log - SmartGateway</PageTitle>
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Audit Log</div>
+        <div class="page-sub">Full changelog with actor identity and before/after values</div>
+    </div>
+</div>
+
+<div class="filter-bar">
+    <select @bind="_filterEntity" @bind:after="Load" class="filter-select">
+        <option value="">All entities</option>
+        <option value="Route">Route</option>
+        <option value="Cluster">Cluster</option>
+        <option value="Destination">Destination</option>
+    </select>
+    <select @bind="_filterAction" @bind:after="Load" class="filter-select">
+        <option value="">All actions</option>
+        <option value="CREATE">CREATE</option>
+        <option value="UPDATE">UPDATE</option>
+        <option value="DELETE">DELETE</option>
+        <option value="REGISTER">REGISTER</option>
+        <option value="DEREGISTER">DEREGISTER</option>
+    </select>
+</div>
+
+<div class="section-full">
+    <div class="section-body">
+        @if (_logs == null)
+        {
+            <div style="padding:24px;color:var(--text3)">Loading...</div>
+        }
+        else if (_logs.Count == 0)
+        {
+            <div class="empty-state">
+                <div class="empty-title">No audit entries</div>
+                <div class="empty-desc">Changes will appear here as they are made.</div>
+            </div>
+        }
+        else
+        {
+            @foreach (var log in _logs)
+            {
+                <div class="audit-row">
+                    <div class="audit-op @GetOpClass(log.Action)"></div>
+                    <div class="audit-entity">@log.EntityType / @log.EntityId</div>
+                    <div class="audit-desc">
+                        <span style="font-family:var(--mono);font-size:11px;color:var(--text3)">@log.Action</span>
+                        @if (!string.IsNullOrEmpty(log.NewValues))
+                        {
+                            <span style="margin-left:4px;font-size:11px;color:var(--text2)">@TruncateJson(log.NewValues)</span>
+                        }
+                    </div>
+                    <div class="audit-time">@log.ChangedAt.ToString("HH:mm:ss")</div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private List<GatewayAuditLog>? _logs;
+    private string _filterEntity = "";
+    private string _filterAction = "";
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        using var context = await DbFactory.CreateDbContextAsync();
+        var query = context.AuditLogs.AsNoTracking().AsQueryable();
+
+        if (!string.IsNullOrEmpty(_filterEntity))
+            query = query.Where(l => l.EntityType == _filterEntity);
+        if (!string.IsNullOrEmpty(_filterAction))
+            query = query.Where(l => l.Action == _filterAction);
+
+        _logs = await query.OrderByDescending(l => l.ChangedAt).Take(100).ToListAsync();
+    }
+
+    private static string GetOpClass(string action) => action switch
+    {
+        "CREATE" or "REGISTER" => "create",
+        "UPDATE" => "update",
+        "DELETE" or "DEREGISTER" => "delete",
+        _ => ""
+    };
+
+    private static string TruncateJson(string json) =>
+        json.Length > 80 ? json[..80] + "..." : json;
+}

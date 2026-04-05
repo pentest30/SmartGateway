@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Key Authentication - SmartGateway Documentation</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0d1720;--surface:#13202e;--surface2:#182a3a;--border:#1e3348;
+    --accent:#00d4aa;--accent2:#6c5ce7;--text:#e8edf2;--text2:#a4b3c4;--text3:#5e7a94;
+    --success:#00d4aa;--danger:#ff4757;--warn:#ffa502;
+    --font:'Syne',sans-serif;--mono:'JetBrains Mono',monospace;
+    --radius:10px;--radius-sm:6px;
+  }
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--text);font-family:var(--font);line-height:1.7;font-size:15px}
+  a{color:var(--accent);text-decoration:none;transition:opacity .2s}
+  a:hover{opacity:.8}
+
+  /* ── Navbar ── */
+  .navbar{position:sticky;top:0;z-index:100;background:rgba(13,23,32,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0 32px}
+  .nav-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;height:56px;gap:24px;overflow-x:auto}
+  .nav-brand{font-weight:800;font-size:17px;color:var(--accent);white-space:nowrap;letter-spacing:-.3px}
+  .nav-links{display:flex;gap:6px;flex:1;overflow-x:auto;scrollbar-width:none}
+  .nav-links::-webkit-scrollbar{display:none}
+  .nav-link{font-size:12.5px;padding:6px 11px;border-radius:var(--radius-sm);color:var(--text2);white-space:nowrap;transition:all .2s;font-weight:500}
+  .nav-link:hover{background:var(--surface);color:var(--text)}
+  .nav-link.active{background:rgba(0,212,170,.1);color:var(--accent)}
+
+  /* ── Layout ── */
+  .container{max-width:920px;margin:0 auto;padding:48px 32px 80px}
+
+  /* ── Hero ── */
+  .hero{margin-bottom:56px}
+  .hero-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin-bottom:10px}
+  .hero h1{font-size:40px;font-weight:800;line-height:1.15;letter-spacing:-.5px;margin-bottom:14px}
+  .hero p{font-size:17px;color:var(--text2);max-width:640px;line-height:1.7}
+
+  /* ── Section ── */
+  section{margin-bottom:56px}
+  h2{font-size:26px;font-weight:700;margin-bottom:18px;letter-spacing:-.3px;padding-top:8px;border-top:1px solid var(--border)}
+  h3{font-size:19px;font-weight:600;margin-bottom:12px;color:var(--text)}
+  p,li{color:var(--text2);line-height:1.8}
+  p{margin-bottom:14px}
+  ul,ol{margin-left:20px;margin-bottom:16px}
+  li{margin-bottom:6px}
+
+  /* ── Cards ── */
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px}
+  .card-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px}
+
+  /* ── Code ── */
+  pre{background:#0a1018;border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;overflow-x:auto;margin-bottom:20px;line-height:1.65}
+  code{font-family:var(--mono);font-size:13px}
+  pre code{color:#c8d6e5}
+  :not(pre)>code{background:var(--surface2);padding:2px 7px;border-radius:4px;font-size:13px;color:var(--accent)}
+
+  /* ── Info boxes ── */
+  .info-box{border-left:3px solid var(--accent);background:rgba(0,212,170,.06);padding:16px 20px;border-radius:0 var(--radius) var(--radius) 0;margin-bottom:20px}
+  .info-box.warn{border-left-color:var(--warn);background:rgba(255,165,2,.06)}
+  .info-box.danger{border-left-color:var(--danger);background:rgba(255,71,87,.06)}
+  .info-box strong{color:var(--text);font-weight:600}
+
+  /* ── Table ── */
+  table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:14px}
+  th{text-align:left;font-weight:600;color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:1px;padding:10px 14px;border-bottom:1px solid var(--border)}
+  td{padding:12px 14px;border-bottom:1px solid var(--border);color:var(--text2)}
+  tr:hover td{background:rgba(0,212,170,.03)}
+
+  /* ── Diagram ── */
+  .flow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px;padding:20px;background:var(--surface);border-radius:var(--radius);border:1px solid var(--border)}
+  .flow-step{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 16px;font-size:13px;font-weight:500;color:var(--text);text-align:center;min-width:100px}
+  .flow-arrow{color:var(--accent);font-size:20px;font-weight:700}
+  .flow-step.highlight{border-color:var(--accent);background:rgba(0,212,170,.08);color:var(--accent)}
+
+  /* ── Badge ── */
+  .badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px}
+  .badge-green{background:rgba(0,212,170,.12);color:var(--success)}
+  .badge-red{background:rgba(255,71,87,.12);color:var(--danger)}
+
+  /* ── Steps ── */
+  .steps{counter-reset:step}
+  .step{counter-increment:step;position:relative;padding-left:48px;margin-bottom:28px}
+  .step::before{content:counter(step);position:absolute;left:0;top:0;width:32px;height:32px;border-radius:50%;background:rgba(0,212,170,.12);color:var(--accent);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(0,212,170,.25)}
+  .step h3{margin-bottom:8px}
+
+  /* ── Footer ── */
+  footer{border-top:1px solid var(--border);padding:32px;text-align:center;color:var(--text3);font-size:13px}
+
+  /* ── Syntax colors ── */
+  .kw{color:#c678dd} .str{color:#98c379} .cm{color:#5c6370;font-style:italic} .fn{color:#61afef} .num{color:#d19a66} .op{color:#56b6c2}
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-inner">
+    <div class="nav-brand">SmartGateway</div>
+    <div class="nav-links">
+      <a href="01-getting-started.html" class="nav-link">01 Getting Started</a>
+      <a href="02-architecture.html" class="nav-link">02 Architecture</a>
+      <a href="03-clusters.html" class="nav-link">03 Clusters</a>
+      <a href="04-routes.html" class="nav-link">04 Routes</a>
+      <a href="05-health-checks.html" class="nav-link">05 Health Checks</a>
+      <a href="06-resilience.html" class="nav-link">06 Resilience</a>
+      <a href="07-authentication.html" class="nav-link active">07 Authentication</a>
+      <a href="08-rate-limiting.html" class="nav-link">08 Rate Limiting</a>
+      <a href="09-canary-deployments.html" class="nav-link">09 Canary</a>
+      <a href="10-transforms.html" class="nav-link">10 Transforms</a>
+      <a href="11-admin-ui.html" class="nav-link">11 Admin UI</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-label">Chapter 07</div>
+    <h1>API Key Authentication</h1>
+    <p>SmartGateway protects routes with API key authentication. Keys are hashed with SHA-256 before storage, validated on every request through the <code>X-Api-Key</code> header, and managed via the Admin UI or direct database operations.</p>
+  </div>
+
+  <!-- Section 1: Overview -->
+  <section id="overview">
+    <h2>How It Works</h2>
+    <p>API key authentication in SmartGateway follows a straightforward security model. The raw key is shown to the user exactly once at creation time, and only the SHA-256 hash is persisted. When a request arrives, the gateway hashes the incoming key and compares it against stored hashes.</p>
+
+    <div class="flow">
+      <div class="flow-step">Client sends<br><code>X-Api-Key</code></div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-step highlight">ApiKeyValidator<br>computes SHA-256</div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-step">Lookup hash in<br><code>GatewayApiKey</code></div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-step">Match found<br>&amp; IsActive?</div>
+      <div class="flow-arrow">&#8594;</div>
+      <div class="flow-step highlight">Allow / Deny<br>request</div>
+    </div>
+
+    <div class="info-box">
+      <strong>Security by design:</strong> Because only the SHA-256 hash is stored in the database, a database leak never exposes raw API keys. This follows the same pattern used for password storage.
+    </div>
+  </section>
+
+  <!-- Section 2: Entity Model -->
+  <section id="entity">
+    <h2>The GatewayApiKey Entity</h2>
+    <p>The <code>GatewayApiKey</code> entity lives in <code>SmartGateway.Core.Entities</code> and maps to the <code>ApiKeys</code> table in SQL Server.</p>
+
+    <pre><code><span class="kw">namespace</span> SmartGateway.Core.Entities;
+
+<span class="kw">public class</span> <span class="fn">GatewayApiKey</span>
+{
+    <span class="kw">public int</span> Id { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public string</span> KeyHash { <span class="kw">get</span>; <span class="kw">set</span>; }     <span class="cm">// SHA-256 hex of the raw key</span>
+    <span class="kw">public string</span> Name { <span class="kw">get</span>; <span class="kw">set</span>; }        <span class="cm">// Human-readable label</span>
+    <span class="kw">public string?</span> Scopes { <span class="kw">get</span>; <span class="kw">set</span>; }    <span class="cm">// Comma-separated scopes</span>
+    <span class="kw">public bool</span> IsActive { <span class="kw">get</span>; <span class="kw">set</span>; }     <span class="cm">// false = revoked</span>
+    <span class="kw">public</span> DateTime CreatedAt { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public</span> DateTime? LastUsedAt { <span class="kw">get</span>; <span class="kw">set</span>; }
+}</code></pre>
+
+    <table>
+      <thead>
+        <tr><th>Column</th><th>Type</th><th>Purpose</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>Id</code></td><td>int (PK)</td><td>Auto-increment primary key</td></tr>
+        <tr><td><code>KeyHash</code></td><td>string</td><td>Lowercase hex SHA-256 of the raw key</td></tr>
+        <tr><td><code>Name</code></td><td>string</td><td>A label like "Production webhook" or "CI pipeline"</td></tr>
+        <tr><td><code>Scopes</code></td><td>string?</td><td>Optional comma-separated scopes (e.g. <code>read,write</code>)</td></tr>
+        <tr><td><code>IsActive</code></td><td>bool</td><td>Set to <code>false</code> to revoke a key without deleting it</td></tr>
+        <tr><td><code>CreatedAt</code></td><td>DateTime</td><td>UTC timestamp when the key was created</td></tr>
+        <tr><td><code>LastUsedAt</code></td><td>DateTime?</td><td>Updated on every successful validation</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Section 3: Hashing -->
+  <section id="hashing">
+    <h2>SHA-256 Hashing Internals</h2>
+    <p>The <code>ApiKeyValidator</code> class in <code>SmartGateway.Host.Auth</code> handles both hashing and database lookup. Here is the hashing method:</p>
+
+    <pre><code><span class="kw">public static string</span> <span class="fn">ComputeHash</span>(<span class="kw">string</span> input)
+{
+    <span class="kw">var</span> bytes = <span class="fn">SHA256.HashData</span>(Encoding.UTF8.<span class="fn">GetBytes</span>(input));
+    <span class="kw">return</span> Convert.<span class="fn">ToHexStringLower</span>(bytes);
+}
+
+<span class="cm">// Example:</span>
+<span class="cm">// Input:  "sgw_a1b2c3d4e5f6..."</span>
+<span class="cm">// Output: "3f2a9c8b71e4d0f6..."  (64 hex characters)</span></code></pre>
+
+    <p>The key format generated by the Admin UI follows the pattern:</p>
+    <pre><code>sgw_{Guid.NewGuid():N}
+
+<span class="cm">// Example output: sgw_8f14e45fceea167a5a36dedd4bea2543</span></code></pre>
+
+    <div class="info-box warn">
+      <strong>One-time display:</strong> The raw key is shown to the user exactly once when created. After that, only the hash exists in the database. If the raw key is lost, the only option is to create a new one.
+    </div>
+  </section>
+
+  <!-- Section 4: Validation Flow -->
+  <section id="validation">
+    <h2>Validation Flow</h2>
+    <p>When a request hits a route with <code>RequiresAuth = true</code>, the gateway extracts the <code>X-Api-Key</code> header and runs the validation pipeline:</p>
+
+    <pre><code><span class="kw">public async</span> Task&lt;<span class="kw">bool</span>&gt; <span class="fn">ValidateAsync</span>(<span class="kw">string</span> rawKey)
+{
+    <span class="cm">// 1. Hash the incoming raw key</span>
+    <span class="kw">var</span> hash = <span class="fn">ComputeHash</span>(rawKey);
+
+    <span class="cm">// 2. Query the database for matching active key</span>
+    <span class="kw">await using var</span> context = <span class="kw">await</span> _contextFactory.<span class="fn">CreateDbContextAsync</span>();
+    <span class="kw">var</span> key = <span class="kw">await</span> context.ApiKeys
+        .<span class="fn">AsNoTracking</span>()
+        .<span class="fn">FirstOrDefaultAsync</span>(k =&gt; k.KeyHash == hash &amp;&amp; k.IsActive);
+
+    <span class="kw">if</span> (key == <span class="kw">null</span>)
+        <span class="kw">return false</span>;  <span class="cm">// No match or key revoked</span>
+
+    <span class="cm">// 3. Update LastUsedAt timestamp</span>
+    <span class="kw">await using var</span> updateCtx = <span class="kw">await</span> _contextFactory.<span class="fn">CreateDbContextAsync</span>();
+    <span class="kw">var</span> toUpdate = <span class="kw">await</span> updateCtx.ApiKeys.<span class="fn">FindAsync</span>(key.Id);
+    <span class="kw">if</span> (toUpdate != <span class="kw">null</span>)
+    {
+        toUpdate.LastUsedAt = DateTime.UtcNow;
+        <span class="kw">await</span> updateCtx.<span class="fn">SaveChangesAsync</span>();
+    }
+
+    <span class="kw">return true</span>;
+}</code></pre>
+
+    <p>Key details about this flow:</p>
+    <ul>
+      <li>The validator uses <code>IDbContextFactory</code> to create short-lived contexts, avoiding concurrency issues.</li>
+      <li>The <code>LastUsedAt</code> update uses a separate context so the read query stays <code>AsNoTracking</code> for performance.</li>
+      <li>Only keys where <code>IsActive == true</code> pass validation -- revoked keys are rejected even if the hash matches.</li>
+    </ul>
+  </section>
+
+  <!-- Section 5: Enabling Auth on Routes -->
+  <section id="enable-auth">
+    <h2>Enabling Authentication on Routes</h2>
+    <p>Authentication is controlled per-route via two fields on the <code>GatewayRoute</code> entity:</p>
+
+    <pre><code><span class="kw">public bool</span> RequiresAuth { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="kw">false</span>;
+<span class="kw">public string?</span> AuthPolicyName { <span class="kw">get</span>; <span class="kw">set</span>; }</code></pre>
+
+    <p>To protect a route, set <code>RequiresAuth = true</code>. You can do this via the REST API:</p>
+
+    <pre><code><span class="cm"># Create a route that requires API key authentication</span>
+curl -X POST http://localhost:5100/api/routes \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "routeId": "orders-api",
+    "clusterId": "orders-cluster",
+    "pathPattern": "/api/orders/{**catch-all}",
+    "methods": "GET,POST,PUT,DELETE",
+    "requiresAuth": true,
+    "authPolicyName": "ApiKey"
+  }'</span></code></pre>
+
+    <p>Routes with <code>RequiresAuth = false</code> (the default) are publicly accessible -- no key needed.</p>
+  </section>
+
+  <!-- Section 6: Creating Keys via Admin UI -->
+  <section id="admin-ui">
+    <h2>Creating Keys via the Admin UI</h2>
+    <p>The Admin UI provides a complete key management interface at <code>/auth</code>.</p>
+
+    <div class="steps">
+      <div class="step">
+        <h3>Navigate to Auth &amp; Keys</h3>
+        <p>Open the Admin UI and click <strong>Auth &amp; Keys</strong> in the sidebar. You will see a table of all existing API keys showing their hash prefix, name, scopes, creation date, last used time, and status.</p>
+      </div>
+      <div class="step">
+        <h3>Click "+ New API Key"</h3>
+        <p>This opens a modal dialog with two fields:</p>
+        <ul>
+          <li><strong>Name</strong> -- a human-readable label (e.g., "Production webhook", "CI pipeline")</li>
+          <li><strong>Scopes</strong> -- optional comma-separated scopes (e.g., "read,write")</li>
+        </ul>
+      </div>
+      <div class="step">
+        <h3>Click "Generate key"</h3>
+        <p>The system generates a raw key in the format <code>sgw_{guid}</code>, computes its SHA-256 hash, and stores only the hash. The raw key is displayed in a green banner at the top of the page:</p>
+        <div class="card" style="border-color:rgba(0,212,170,.25);background:rgba(0,212,170,.06)">
+          <div style="display:flex;align-items:center;gap:12px">
+            <span class="badge-green badge">New key created</span>
+            <code style="font-family:var(--mono);color:var(--accent);font-size:13px">sgw_8f14e45fceea167a5a36dedd4bea2543</code>
+          </div>
+          <p style="font-size:12px;color:var(--text3);margin-top:8px;margin-bottom:0">Copy now -- this won't be shown again</p>
+        </div>
+      </div>
+      <div class="step">
+        <h3>Copy and store the raw key</h3>
+        <p>Save the key in a secrets manager (Azure Key Vault, HashiCorp Vault, etc.). Once you dismiss the banner, the raw key is gone forever.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 7: Using Keys -->
+  <section id="using-keys">
+    <h2>Using API Keys in Requests</h2>
+    <p>Pass the raw API key in the <code>X-Api-Key</code> header:</p>
+
+    <h3>Successful request (valid key)</h3>
+    <pre><code><span class="cm"># Request with a valid API key</span>
+curl -v http://localhost:5000/api/orders \
+  -H <span class="str">"X-Api-Key: sgw_8f14e45fceea167a5a36dedd4bea2543"</span>
+
+<span class="cm"># Response: 200 OK</span>
+<span class="cm"># {</span>
+<span class="cm">#   "orders": [</span>
+<span class="cm">#     { "id": 1, "product": "Widget A", "quantity": 5 },</span>
+<span class="cm">#     { "id": 2, "product": "Widget B", "quantity": 3 }</span>
+<span class="cm">#   ]</span>
+<span class="cm"># }</span></code></pre>
+
+    <h3>Failed request (no key)</h3>
+    <pre><code><span class="cm"># Request without an API key to a protected route</span>
+curl -v http://localhost:5000/api/orders
+
+<span class="cm"># Response: 401 Unauthorized</span>
+<span class="cm"># HTTP/1.1 401 Unauthorized</span>
+<span class="cm"># Content-Length: 0</span>
+<span class="cm"># Date: Sat, 05 Apr 2026 12:00:00 GMT</span></code></pre>
+
+    <h3>Failed request (invalid key)</h3>
+    <pre><code><span class="cm"># Request with a wrong or revoked key</span>
+curl -v http://localhost:5000/api/orders \
+  -H <span class="str">"X-Api-Key: sgw_invalid_key_here"</span>
+
+<span class="cm"># Response: 401 Unauthorized</span>
+<span class="cm"># HTTP/1.1 401 Unauthorized</span>
+<span class="cm"># Content-Length: 0</span></code></pre>
+
+    <h3>Public route (no auth required)</h3>
+    <pre><code><span class="cm"># Routes with RequiresAuth=false are open</span>
+curl http://localhost:5000/api/public/health
+
+<span class="cm"># Response: 200 OK (no key needed)</span>
+<span class="cm"># { "status": "healthy" }</span></code></pre>
+  </section>
+
+  <!-- Section 8: Key Lifecycle -->
+  <section id="lifecycle">
+    <h2>Key Lifecycle Management</h2>
+
+    <table>
+      <thead>
+        <tr><th>Action</th><th>Effect</th><th>Reversible?</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Create</strong></td><td>Generates raw key, stores SHA-256 hash, sets <code>IsActive = true</code></td><td>--</td></tr>
+        <tr><td><strong>Revoke</strong></td><td>Sets <code>IsActive = false</code> -- key immediately stops working</td><td>Yes (re-activate in DB)</td></tr>
+        <tr><td><strong>Delete</strong></td><td>Removes the key row entirely from the database</td><td>No</td></tr>
+      </tbody>
+    </table>
+
+    <p>In the Admin UI, active keys show a <span class="badge badge-green">active</span> badge and a "Revoke" button. Revoked keys show <span class="badge badge-red">revoked</span> and a "Delete" button for permanent removal.</p>
+
+    <div class="info-box">
+      <strong>Tip:</strong> Prefer revoking over deleting. A revoked key leaves an audit trail showing it existed, while deletion removes all evidence. You can always delete a revoked key later.
+    </div>
+  </section>
+
+  <!-- Section 9: Scopes -->
+  <section id="scopes">
+    <h2>Scopes</h2>
+    <p>The <code>Scopes</code> field on <code>GatewayApiKey</code> stores a comma-separated list of permissions. While the base <code>ApiKeyValidator</code> checks only for existence and active status, you can extend it to match scopes against route-level requirements.</p>
+
+    <pre><code><span class="cm">// Example scope values stored in the database:</span>
+<span class="str">"read"</span>            <span class="cm">// Read-only access</span>
+<span class="str">"read,write"</span>      <span class="cm">// Read and write access</span>
+<span class="str">"admin"</span>           <span class="cm">// Full admin access</span>
+<span class="str">"orders:read"</span>     <span class="cm">// Namespaced read access to orders</span></code></pre>
+
+    <p>Scopes are displayed in the Admin UI as individual badges next to each key, making it easy to audit which keys have which permissions.</p>
+  </section>
+
+  <!-- Section 10: Database Schema -->
+  <section id="schema">
+    <h2>Database Schema</h2>
+    <p>The <code>ApiKeys</code> table is registered in <code>SmartGatewayDbContext</code> and created via EF Core migrations:</p>
+
+    <pre><code><span class="cm">-- SQL Server table (created by EF Core migration)</span>
+<span class="kw">CREATE TABLE</span> [ApiKeys] (
+    [Id]         <span class="kw">INT</span>            <span class="kw">IDENTITY</span>(<span class="num">1</span>,<span class="num">1</span>) <span class="kw">NOT NULL PRIMARY KEY</span>,
+    [KeyHash]    <span class="kw">NVARCHAR</span>(MAX)  <span class="kw">NOT NULL</span>,
+    [Name]       <span class="kw">NVARCHAR</span>(MAX)  <span class="kw">NOT NULL</span>,
+    [Scopes]     <span class="kw">NVARCHAR</span>(MAX)  <span class="kw">NULL</span>,
+    [IsActive]   <span class="kw">BIT</span>            <span class="kw">NOT NULL DEFAULT</span> <span class="num">1</span>,
+    [CreatedAt]  <span class="kw">DATETIME2</span>      <span class="kw">NOT NULL</span>,
+    [LastUsedAt] <span class="kw">DATETIME2</span>      <span class="kw">NULL</span>
+);</code></pre>
+  </section>
+
+  <!-- Section 11: Security Best Practices -->
+  <section id="best-practices">
+    <h2>Security Best Practices</h2>
+
+    <div class="card">
+      <div class="card-title">1. Use HTTPS in production</div>
+      <p style="margin-bottom:0">API keys are sent as plaintext headers. Without TLS, they can be intercepted. Always terminate TLS before the gateway or use HTTPS end-to-end.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">2. Rotate keys regularly</div>
+      <p style="margin-bottom:0">Create a new key, distribute it to consumers, then revoke the old one. The <code>LastUsedAt</code> field helps identify which keys are still in active use.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">3. Use scopes for least privilege</div>
+      <p style="margin-bottom:0">Issue keys with the minimum required scopes. A webhook that only reads data should not have a <code>write</code> scope.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">4. Monitor LastUsedAt</div>
+      <p style="margin-bottom:0">Keys that haven't been used in a long time are candidates for revocation. Check the "Last used" column in the Admin UI regularly.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">5. Store raw keys in a secrets manager</div>
+      <p style="margin-bottom:0">Never store raw API keys in source code, config files, or unencrypted databases. Use Azure Key Vault, AWS Secrets Manager, or HashiCorp Vault.</p>
+    </div>
+  </section>
+
+  <!-- Section 12: Integration Example -->
+  <section id="integration">
+    <h2>Full Integration Example</h2>
+    <p>Here is a complete end-to-end example: create a protected cluster, route, and API key, then make authenticated requests.</p>
+
+    <pre><code><span class="cm"># Step 1: Create a cluster</span>
+curl -X POST http://localhost:5100/api/clusters \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"clusterId": "payments-svc", "loadBalancing": "RoundRobin"}'</span>
+
+<span class="cm"># Step 2: Add a destination</span>
+curl -X POST http://localhost:5100/api/services/register \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "clusterId": "payments-svc",
+    "destinationId": "payments-1",
+    "address": "http://10.0.1.50:8080"
+  }'</span>
+
+<span class="cm"># Step 3: Create a protected route</span>
+curl -X POST http://localhost:5100/api/routes \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "routeId": "payments-route",
+    "clusterId": "payments-svc",
+    "pathPattern": "/api/payments/{**catch-all}",
+    "requiresAuth": true
+  }'</span>
+
+<span class="cm"># Step 4: Create an API key via the Admin UI at /auth</span>
+<span class="cm"># (Copy the generated key: sgw_...)</span>
+
+<span class="cm"># Step 5: Test the protected route</span>
+curl http://localhost:5000/api/payments/charge \
+  -H <span class="str">"X-Api-Key: sgw_8f14e45fceea167a5a36dedd4bea2543"</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"amount": 99.99, "currency": "USD"}'</span>
+
+<span class="cm"># 200 OK -- request proxied to payments-svc</span></code></pre>
+  </section>
+
+</div>
+
+<footer>
+  SmartGateway Documentation &mdash; API Gateway built on YARP
+</footer>
+
+</body>
+</html>

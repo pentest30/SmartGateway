@@ -1,0 +1,155 @@
+@page "/auth"
+@using Microsoft.EntityFrameworkCore
+@using SmartGateway.Core.Data
+@using SmartGateway.Core.Entities
+@using System.Security.Cryptography
+@using System.Text
+@inject IDbContextFactory<SmartGatewayDbContext> DbFactory
+@rendermode InteractiveServer
+
+<PageTitle>Auth & Keys - SmartGateway</PageTitle>
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Auth & Keys</div>
+        <div class="page-sub">API key management</div>
+    </div>
+    <div style="margin-left:auto">
+        <button class="btn btn-primary" @onclick="() => _showModal = true">+ New API Key</button>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(_generatedKey))
+{
+    <div style="background:rgba(0,212,170,0.1);border:1px solid rgba(0,212,170,0.25);border-radius:8px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
+        <span class="badge badge-green">New key created</span>
+        <code style="font-family:var(--mono);font-size:13px;color:var(--accent);flex:1">@_generatedKey</code>
+        <span style="font-size:11px;color:var(--text3)">Copy now — this won't be shown again</span>
+        <button class="btn btn-ghost btn-sm" @onclick='() => _generatedKey = ""'>Dismiss</button>
+    </div>
+}
+
+<div class="section-full">
+    <div class="section-head"><div class="card-title">API Keys</div><span class="badge badge-gray">@(_keys?.Count ?? 0) total</span></div>
+    @if (_keys == null)
+    {
+        <div style="padding:24px;color:var(--text3)">Loading...</div>
+    }
+    else if (_keys.Count == 0)
+    {
+        <div class="empty-state"><div class="empty-title">No API keys</div><div class="empty-desc">Create an API key to secure protected routes.</div></div>
+    }
+    else
+    {
+        <table class="table">
+            <thead><tr><th>Key ID</th><th>Name</th><th>Scopes</th><th>Created</th><th>Last used</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var key in _keys)
+                {
+                    <tr>
+                        <td><span style="font-family:var(--mono);font-size:11px;color:var(--text3)">@key.KeyHash[..12]...</span></td>
+                        <td>@key.Name</td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(key.Scopes))
+                            {
+                                @foreach (var scope in key.Scopes.Split(','))
+                                {
+                                    <span class="badge badge-gray" style="margin-right:4px">@scope.Trim()</span>
+                                }
+                            }
+                        </td>
+                        <td><span style="font-size:11px;color:var(--text3)">@key.CreatedAt.ToString("yyyy-MM-dd")</span></td>
+                        <td><span style="font-size:11px;color:var(--text3)">@(key.LastUsedAt?.ToString("HH:mm:ss") ?? "never")</span></td>
+                        <td>
+                            @if (key.IsActive)
+                            {
+                                <span class="badge badge-green"><span class="badge-dot"></span>active</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-red"><span class="badge-dot"></span>revoked</span>
+                            }
+                        </td>
+                        <td>
+                            @if (key.IsActive)
+                            {
+                                <button class="btn btn-danger btn-sm" @onclick="() => Revoke(key.Id)">Revoke</button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-ghost btn-sm" @onclick="() => Delete(key.Id)">Delete</button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@if (_showModal)
+{
+    <div class="modal-overlay open" @onclick="() => _showModal = false">
+        <div class="modal" @onclick:stopPropagation="true">
+            <div class="modal-title">New API Key</div>
+            <div class="form-group" style="margin-bottom:12px"><div class="form-label">Name</div><input @bind="_newName" class="form-input" placeholder="e.g. Production webhook" /></div>
+            <div class="form-group" style="margin-bottom:12px"><div class="form-label">Scopes (comma-separated)</div><input @bind="_newScopes" class="form-input" placeholder="read,write" /></div>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" @onclick="() => _showModal = false">Cancel</button>
+                <button class="btn btn-primary" @onclick="CreateKey">Generate key</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<GatewayApiKey>? _keys;
+    private bool _showModal;
+    private string _newName = "", _newScopes = "";
+    private string _generatedKey = "";
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        using var ctx = await DbFactory.CreateDbContextAsync();
+        _keys = await ctx.ApiKeys.AsNoTracking().OrderByDescending(k => k.CreatedAt).ToListAsync();
+    }
+
+    private async Task CreateKey()
+    {
+        if (string.IsNullOrWhiteSpace(_newName)) return;
+        var rawKey = $"sgw_{Guid.NewGuid():N}";
+        var hash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(rawKey)));
+
+        using var ctx = await DbFactory.CreateDbContextAsync();
+        ctx.ApiKeys.Add(new GatewayApiKey
+        {
+            KeyHash = hash,
+            Name = _newName.Trim(),
+            Scopes = string.IsNullOrWhiteSpace(_newScopes) ? null : _newScopes.Trim()
+        });
+        await ctx.SaveChangesAsync();
+
+        _generatedKey = rawKey;
+        _newName = ""; _newScopes = "";
+        _showModal = false;
+        await Load();
+    }
+
+    private async Task Revoke(int id)
+    {
+        using var ctx = await DbFactory.CreateDbContextAsync();
+        var key = await ctx.ApiKeys.FindAsync(id);
+        if (key != null) { key.IsActive = false; await ctx.SaveChangesAsync(); }
+        await Load();
+    }
+
+    private async Task Delete(int id)
+    {
+        using var ctx = await DbFactory.CreateDbContextAsync();
+        var key = await ctx.ApiKeys.FindAsync(id);
+        if (key != null) { ctx.ApiKeys.Remove(key); await ctx.SaveChangesAsync(); }
+        await Load();
+    }
+}
