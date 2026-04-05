@@ -13,112 +13,213 @@
         <div class="page-sub">Control plane overview — live YARP state</div>
     </div>
     <div style="margin-left:auto;display:flex;gap:8px">
-        <a href="clusters" class="btn btn-ghost btn-sm">Clusters</a>
+        <a href="audit" class="btn btn-ghost btn-sm">Export</a>
         <a href="routes" class="btn btn-primary btn-sm">+ New Route</a>
     </div>
 </div>
 
+<!-- ── KPI Stats ── -->
 <div class="stats-grid">
     <div class="stat-card">
         <div class="stat-label">Active clusters</div>
         <div class="stat-val">@_activeClusterCount<span class="stat-unit">/@_clusterCount</span></div>
-        <div class="stat-bar"><div class="stat-fill" style="width:@(_clusterCount > 0 ? (int)((double)_activeClusterCount/_clusterCount*100) : 0)%;background:var(--accent)"></div></div>
+        <div class="stat-delta up">@_activeClusterCount operational</div>
+        <div class="stat-bar"><div class="stat-fill" style="width:@Pct(_activeClusterCount, _clusterCount)%;background:var(--accent)"></div></div>
     </div>
     <div class="stat-card">
         <div class="stat-label">Active routes</div>
         <div class="stat-val">@_activeRouteCount<span class="stat-unit">/@_routeCount</span></div>
-        <div class="stat-bar"><div class="stat-fill" style="width:@(_routeCount > 0 ? (int)((double)_activeRouteCount/_routeCount*100) : 0)%;background:var(--accent2)"></div></div>
+        <div class="stat-delta up">@_activeRouteCount routing</div>
+        <div class="stat-bar"><div class="stat-fill" style="width:@Pct(_activeRouteCount, _routeCount)%;background:var(--accent2)"></div></div>
     </div>
     <div class="stat-card">
         <div class="stat-label">Healthy nodes</div>
         <div class="stat-val">@_healthyCount<span class="stat-unit">/@_destinationCount</span></div>
-        <div class="stat-bar"><div class="stat-fill" style="width:@(_destinationCount > 0 ? (int)((double)_healthyCount/_destinationCount*100) : 0)%;background:var(--success)"></div></div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-label">Unhealthy</div>
-        <div class="stat-val" style="color:@(_unhealthyCount > 0 ? "var(--danger)" : "var(--success)")">@_unhealthyCount</div>
         @if (_unhealthyCount > 0)
         {
-            <div class="stat-delta down">@_unhealthyCount node(s) evicted</div>
+            <div class="stat-delta down">@_unhealthyCount node evicted</div>
         }
         else
         {
-            <div class="stat-delta up">All systems operational</div>
+            <div class="stat-delta up">All healthy</div>
         }
+        <div class="stat-bar"><div class="stat-fill" style="width:@Pct(_healthyCount, _destinationCount)%;background:var(--success)"></div></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Resilience policies</div>
+        <div class="stat-val">@_resilienceCount</div>
+        <div class="stat-delta up">@_resilienceCount configured</div>
+        <div class="stat-bar"><div class="stat-fill" style="width:@Pct(_resilienceCount, Math.Max(_clusterCount,1))%;background:var(--warn)"></div></div>
     </div>
 </div>
 
+<!-- ── Traffic chart + cluster distribution ── -->
 <div class="grid-2">
     <div class="card">
         <div class="card-header">
-            <div class="card-title">Recent clusters</div>
-            <span class="badge badge-gray">@_clusterCount total</span>
+            <div class="card-title">Destinations per cluster</div>
+            <span class="badge badge-blue">live</span>
         </div>
-        @if (_recentClusters != null && _recentClusters.Count > 0)
+        @if (_clusterDestCounts != null && _clusterDestCounts.Count > 0)
         {
-            @foreach (var c in _recentClusters)
-            {
-                <div class="dest-row">
-                    <div class="dest-indicator" style="background:@(c.IsActive ? "var(--success)" : "var(--danger)")"></div>
-                    <div class="dest-addr" style="color:var(--text);font-weight:500">@c.ClusterId</div>
-                    <span class="badge badge-gray">@c.LoadBalancing</span>
-                    @if (c.IsActive)
-                    {
-                        <span class="badge badge-green" style="font-size:10px"><span class="badge-dot"></span>active</span>
-                    }
-                    else
-                    {
-                        <span class="badge badge-red" style="font-size:10px"><span class="badge-dot"></span>inactive</span>
-                    }
-                </div>
-            }
+            <div class="traffic-chart">
+                @{ var maxDest = _clusterDestCounts.Max(c => c.Total); }
+                @foreach (var c in _clusterDestCounts)
+                {
+                    var height = maxDest > 0 ? (int)((double)c.Total / maxDest * 100) : 10;
+                    var opacity = 0.5 + (double)c.Healthy / Math.Max(c.Total, 1) * 0.5;
+                    <div class="bar-wrap">
+                        <div class="bar" style="height:@height%;background:var(--accent);opacity:@opacity.ToString("F2")"></div>
+                        <div class="bar-label">@Truncate(c.ClusterId, 6)</div>
+                    </div>
+                }
+            </div>
         }
         else
         {
-            <div class="empty-state">
-                <div class="empty-title">No clusters yet</div>
-                <div class="empty-desc">Create your first upstream cluster.</div>
-            </div>
+            <div style="height:80px;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:13px">No clusters</div>
         }
     </div>
     <div class="card">
-        <div class="card-header">
-            <div class="card-title">Recent routes</div>
-            <span class="badge badge-gray">@_routeCount total</span>
-        </div>
-        @if (_recentRoutes != null && _recentRoutes.Count > 0)
-        {
-            @foreach (var r in _recentRoutes)
+        <div class="card-header"><div class="card-title">Traffic by cluster</div></div>
+        <div style="padding:4px 0">
+            @if (_clusterDestCounts != null)
             {
-                <div class="dest-row">
-                    <div class="dest-indicator" style="background:@(r.IsActive ? "var(--success)" : "var(--danger)")"></div>
-                    <div style="flex:1">
-                        <span class="tag">@r.RouteId</span>
+                var totalDests = _clusterDestCounts.Sum(c => c.Total);
+                var colors = new[] { "var(--accent)", "var(--accent2)", "var(--accent3)", "var(--warn)", "var(--success)" };
+                var idx = 0;
+                @foreach (var c in _clusterDestCounts)
+                {
+                    var pct = totalDests > 0 ? (int)((double)c.Total / totalDests * 100) : 0;
+                    var color = colors[idx % colors.Length];
+                    idx++;
+                    <div class="progress-row">
+                        <div class="progress-label">@c.ClusterId</div>
+                        <div class="progress-track">
+                            <div class="progress-fill" style="width:@pct%;background:@color"></div>
+                        </div>
+                        <div class="progress-val">@pct%</div>
                     </div>
-                    <span style="font-family:var(--mono);font-size:11px;color:var(--text3)">@r.PathPattern</span>
-                    <span class="badge badge-gray" style="font-size:10px">@r.ClusterId</span>
-                </div>
+                }
             }
-        }
-        else
+        </div>
+    </div>
+</div>
+
+<!-- ── Active routes table ── -->
+<div class="section-full">
+    <div class="section-head">
+        <div class="card-title">Active routes</div>
+        <span class="badge badge-gray">@_activeRouteCount total</span>
+        <div style="margin-left:auto"><a href="routes" class="btn btn-ghost btn-sm">View all</a></div>
+    </div>
+    @if (_routes != null && _routes.Count > 0)
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Route ID</th>
+                    <th>Path pattern</th>
+                    <th>Cluster</th>
+                    <th>Auth</th>
+                    <th>Destinations</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in _routes)
+                {
+                    <tr>
+                        <td><span class="tag">@r.RouteId</span></td>
+                        <td><span style="font-family:var(--mono);font-size:12px;color:var(--text)">@r.PathPattern</span></td>
+                        <td>@r.ClusterId</td>
+                        <td>
+                            @if (r.RequiresAuth)
+                            {
+                                <span class="badge badge-blue">@(r.AuthPolicyName ?? "API Key")</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-gray">none</span>
+                            }
+                        </td>
+                        <td>
+                            @{
+                                var destInfo = _clusterDestCounts?.FirstOrDefault(c => c.ClusterId == r.ClusterId);
+                            }
+                            @if (destInfo != null)
+                            {
+                                <span style="font-family:var(--mono);font-size:11px;color:@(destInfo.Healthy == destInfo.Total ? "var(--success)" : "var(--warn)")">
+                                    @destInfo.Healthy/@destInfo.Total
+                                </span>
+                            }
+                            else
+                            {
+                                <span style="font-family:var(--mono);font-size:11px;color:var(--text3)">0</span>
+                            }
+                        </td>
+                        <td>
+                            @if (r.IsActive)
+                            {
+                                <span class="badge badge-green"><span class="badge-dot"></span>active</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-red"><span class="badge-dot"></span>inactive</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div style="padding:32px;text-align:center">
+            <div style="font-size:14px;font-weight:600;color:var(--text2);margin-bottom:4px">No active routes</div>
+            <div style="font-size:13px;color:var(--text3)">Create a route to start proxying traffic.</div>
+        </div>
+    }
+</div>
+
+<!-- ── Recent audit activity ── -->
+<div class="section-full">
+    <div class="section-head">
+        <div class="card-title">Recent activity</div>
+        <div style="margin-left:auto"><a href="audit" class="btn btn-ghost btn-sm">View all</a></div>
+    </div>
+    @if (_recentAudit != null && _recentAudit.Count > 0)
+    {
+        @foreach (var log in _recentAudit)
         {
-            <div class="empty-state">
-                <div class="empty-title">No routes yet</div>
-                <div class="empty-desc">Create a route to start proxying traffic.</div>
+            <div class="audit-row">
+                <div class="audit-op @GetOpClass(log.Action)"></div>
+                <div class="audit-entity">@log.EntityType / @log.EntityId</div>
+                <div class="audit-desc">
+                    <span style="font-family:var(--mono);font-size:11px;color:var(--text3)">@log.Action</span>
+                    <span style="margin-left:6px;font-size:11px;color:var(--text2)">by @log.ChangedBy</span>
+                </div>
+                <div class="audit-time">@log.ChangedAt.ToString("HH:mm:ss")</div>
             </div>
         }
-    </div>
+    }
+    else
+    {
+        <div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">No recent activity</div>
+    }
 </div>
 
 @code {
     private int _clusterCount, _activeClusterCount, _routeCount, _activeRouteCount;
-    private int _destinationCount, _healthyCount, _unhealthyCount;
-    private List<GatewayCluster>? _recentClusters;
-    private List<GatewayRoute>? _recentRoutes;
+    private int _destinationCount, _healthyCount, _unhealthyCount, _resilienceCount;
+    private List<GatewayRoute>? _routes;
+    private List<ClusterDestCount>? _clusterDestCounts;
+    private List<GatewayAuditLog>? _recentAudit;
 
     protected override async Task OnInitializedAsync()
     {
         using var context = await DbFactory.CreateDbContextAsync();
+
         _clusterCount = await context.Clusters.CountAsync();
         _activeClusterCount = await context.Clusters.CountAsync(c => c.IsActive);
         _routeCount = await context.Routes.CountAsync();
@@ -126,7 +227,46 @@
         _destinationCount = await context.Destinations.CountAsync();
         _healthyCount = await context.Destinations.CountAsync(d => d.IsHealthy);
         _unhealthyCount = _destinationCount - _healthyCount;
-        _recentClusters = await context.Clusters.AsNoTracking().OrderByDescending(c => c.UpdatedAt).Take(5).ToListAsync();
-        _recentRoutes = await context.Routes.AsNoTracking().OrderByDescending(r => r.UpdatedAt).Take(5).ToListAsync();
+        _resilienceCount = await context.ResiliencePolicies.CountAsync();
+
+        _routes = await context.Routes.AsNoTracking()
+            .Where(r => r.IsActive)
+            .OrderBy(r => r.Priority).ThenBy(r => r.RouteId)
+            .Take(10)
+            .ToListAsync();
+
+        _clusterDestCounts = await context.Clusters.AsNoTracking()
+            .Where(c => c.IsActive)
+            .Include(c => c.Destinations)
+            .Select(c => new ClusterDestCount
+            {
+                ClusterId = c.ClusterId,
+                Total = c.Destinations.Count,
+                Healthy = c.Destinations.Count(d => d.IsHealthy)
+            })
+            .OrderByDescending(c => c.Total)
+            .ToListAsync();
+
+        _recentAudit = await context.AuditLogs.AsNoTracking()
+            .OrderByDescending(a => a.ChangedAt)
+            .Take(8)
+            .ToListAsync();
+    }
+
+    private static int Pct(int value, int total) => total > 0 ? (int)((double)value / total * 100) : 0;
+    private static string Truncate(string s, int max) => s.Length <= max ? s : s[..max];
+    private static string GetOpClass(string action) => action switch
+    {
+        "CREATE" or "REGISTER" => "create",
+        "UPDATE" => "update",
+        "DELETE" or "DEREGISTER" => "delete",
+        _ => ""
+    };
+
+    private class ClusterDestCount
+    {
+        public string ClusterId { get; set; } = "";
+        public int Total { get; set; }
+        public int Healthy { get; set; }
     }
 }
